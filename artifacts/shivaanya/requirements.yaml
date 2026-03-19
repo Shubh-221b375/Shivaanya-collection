@@ -1,0 +1,21 @@
+packages:
+  "framer-motion": "For cinematic page transitions, parallax scrolling, and 3D card effects"
+  "uuid": "For generating unique guest session IDs for the cart"
+  "clsx": "For conditional class name joining"
+  "tailwind-merge": "For merging tailwind classes safely"
+
+images:
+  - path: "artifacts/shivaanya/public/images/hero-silk.png"
+    description: "Abstract luxurious flowing silk fabric in deep rich burgundy red with warm golden lighting, ethereal, highly detailed, photorealistic, cinematic"
+    aspect_ratio: "16:9"
+  - path: "artifacts/shivaanya/public/images/gold-mandala-bg.png"
+    description: "Subtle abstract traditional Indian mandala pattern overlay in soft gold on a warm cream background, elegant, minimal, luxurious"
+    aspect_ratio: "16:9"
+  - path: "artifacts/shivaanya/public/images/texture-warm.png"
+    description: "Soft ethereal light leaks and bokeh in warm golden and amber tones, blurred, atmospheric background"
+    aspect_ratio: "16:9"
+
+notes:
+  - "App uses framer-motion heavily for the requested storytelling and parallax effects."
+  - "Session ID is managed locally via sessionStorage to track anonymous carts, passed to API."
+  - "Using Unsplash placeholders for products if backend doesn't provide them, as requested."

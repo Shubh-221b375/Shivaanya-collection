@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Shivaanya Collection"
+version = "1.0.0"
+id = "artifacts/shivaanya"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22056
+
+[services.development]
+run = "pnpm --filter @workspace/shivaanya run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/shivaanya", "run", "build" ]
+publicDir = "artifacts/shivaanya/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22056"
+BASE_PATH = "/"
