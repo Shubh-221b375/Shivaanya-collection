@@ -1,68 +1,134 @@
 import { Link } from "wouter";
+import { Sparkles } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="bg-foreground text-background pt-20 pb-10 relative overflow-hidden">
-      {/* Decorative background element */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50" />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-black text-white pt-20 pb-10" id="contact">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-          
+
+          {/* Brand */}
           <div className="lg:col-span-1">
-            <h2 className="text-2xl font-serif font-bold text-accent tracking-widest uppercase mb-6">
-              Shivaanya
-            </h2>
-            <p className="text-background/70 font-light leading-relaxed mb-6">
-              Elegance in Every Thread. We craft stories of heritage through meticulously designed traditional Indian wear for the modern woman.
+            <div className="flex items-center gap-2 mb-6">
+              <Sparkles className="w-5 h-5 text-white" />
+              <h2 className="text-lg font-bold tracking-[0.25em] uppercase">
+                Shivaanya
+              </h2>
+            </div>
+            <p className="text-white/50 text-sm leading-relaxed">
+              Elegance in Every Thread. Discover handcrafted ethnic wear designed for the modern Indian woman who values tradition and style.
             </p>
           </div>
 
+          {/* Menu */}
           <div>
-            <h3 className="text-lg font-serif mb-6 text-background">Collections</h3>
-            <ul className="space-y-4">
-              <li><Link href="/shop?category=Sarees" className="text-background/70 hover:text-accent transition-colors">Heritage Sarees</Link></li>
-              <li><Link href="/shop?category=Lehengas" className="text-background/70 hover:text-accent transition-colors">Bridal Lehengas</Link></li>
-              <li><Link href="/shop?category=Anarkalis" className="text-background/70 hover:text-accent transition-colors">Regal Anarkalis</Link></li>
-              <li><Link href="/shop?category=Suits" className="text-background/70 hover:text-accent transition-colors">Classic Suits</Link></li>
+            <h3 className="text-xs font-semibold tracking-[0.2em] uppercase mb-6 text-white/70">
+              Menu
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link href="/shop" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Shop
+                </Link>
+              </li>
+              <li>
+                <Link href="/cart" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Cart
+                </Link>
+              </li>
             </ul>
           </div>
 
+          {/* Collections */}
           <div>
-            <h3 className="text-lg font-serif mb-6 text-background">Assistance</h3>
-            <ul className="space-y-4">
-              <li><a href="#" className="text-background/70 hover:text-accent transition-colors">Care Instructions</a></li>
-              <li><a href="#" className="text-background/70 hover:text-accent transition-colors">Size Guide</a></li>
-              <li><a href="#" className="text-background/70 hover:text-accent transition-colors">Shipping & Returns</a></li>
-              <li><a href="#" className="text-background/70 hover:text-accent transition-colors">Contact Us</a></li>
+            <h3 className="text-xs font-semibold tracking-[0.2em] uppercase mb-6 text-white/70">
+              Collections
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/shop?category=Sarees" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Heritage Sarees
+                </Link>
+              </li>
+              <li>
+                <Link href="/shop?category=Lehengas" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Bridal Lehengas
+                </Link>
+              </li>
+              <li>
+                <Link href="/shop?category=Anarkalis" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Regal Anarkalis
+                </Link>
+              </li>
+              <li>
+                <Link href="/shop?category=Suits" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Classic Suits
+                </Link>
+              </li>
             </ul>
           </div>
 
+          {/* Contact */}
           <div>
-            <h3 className="text-lg font-serif mb-6 text-background">Newsletter</h3>
-            <p className="text-background/70 font-light text-sm mb-4">
-              Subscribe to receive updates, access to exclusive deals, and more.
-            </p>
-            <div className="flex">
-              <input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="bg-background/10 border border-background/20 text-background px-4 py-2 w-full focus:outline-none focus:border-accent transition-colors rounded-l-md"
-              />
-              <button className="bg-accent text-foreground px-4 py-2 font-medium hover:bg-accent/90 transition-colors rounded-r-md">
-                Subscribe
-              </button>
+            <h3 className="text-xs font-semibold tracking-[0.2em] uppercase mb-6 text-white/70">
+              Contact
+            </h3>
+            <ul className="space-y-3 text-sm text-white/50">
+              <li>Surat, India</li>
+              <li>
+                <a href="mailto:anjalikumari.shivcollection@gmail.com" className="hover:text-white transition-colors">
+                  anjalikumari.shivcollection@gmail.com
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://wa.me/918439192467"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  +91 84391 92467
+                </a>
+              </li>
+            </ul>
+
+            {/* Social */}
+            <div className="flex gap-4 mt-6">
+              {[
+                { label: "Instagram", href: "https://www.instagram.com/shivaanya.collection?igsh=NGN3eW05cXNhZGN1" },
+                { label: "Facebook", href: "https://www.facebook.com/Fashionmaniahub" },
+                { label: "Twitter", href: "#" },
+              ].map(({ label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  className="text-white/30 hover:text-white transition-colors text-xs tracking-wider uppercase"
+                >
+                  {label}
+                </a>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="border-t border-background/10 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-background/50 text-sm mb-4 md:mb-0">
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-white/30 text-xs tracking-wider">
             © {new Date().getFullYear()} Shivaanya Collection. All rights reserved.
           </p>
-          <div className="flex space-x-6 text-sm text-background/50">
-            <a href="#" className="hover:text-accent transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-accent transition-colors">Terms of Service</a>
+          <div className="flex gap-6 mt-4 md:mt-0 pr-14 sm:pr-20 md:pr-28">
+            <a href="#" className="text-white/30 hover:text-white transition-colors text-xs tracking-wider">
+              Privacy Policy
+            </a>
+            <a href="#" className="text-white/30 hover:text-white transition-colors text-xs tracking-wider">
+              Terms
+            </a>
           </div>
         </div>
       </div>

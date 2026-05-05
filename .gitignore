@@ -44,6 +44,13 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Replit
+# Local tool cache
 .cache/
 .local/
+
+# Vite app: large assets served from S3/CloudFront in prod (set VITE_MEDIA_BASE_URL).
+# Sync locally for dev: keep same keys under public/media/... or pull from your bucket.
+artifacts/shivaanya/public/media/
+
+# Shivaanya Vite: local env (S3 base URL, Razorpay key, etc.)
+artifacts/shivaanya/.env.local

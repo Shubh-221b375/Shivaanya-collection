@@ -1,7 +1,5 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
@@ -9,15 +7,8 @@ import ProductDetail from "@/pages/ProductDetail";
 import Cart from "@/pages/Cart";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30000,
-      retry: 1,
-    },
-  },
-});
+import { FloatingSocialLinks } from "@/components/layout/FloatingSocialLinks";
+import { CartProvider } from "@/context/CartContext";
 
 function Router() {
   return (
@@ -31,20 +22,29 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
       <Footer />
+      <FloatingSocialLinks />
     </>
   );
 }
 
+function ScrollToTopOnRouteChange() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [location]);
+
+  return null;
+}
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <CartProvider>
+      <WouterRouter base={import.meta.env.BASE_URL?.replace(/\/$/, "") || ""}>
+        <ScrollToTopOnRouteChange />
+        <Router />
+      </WouterRouter>
+    </CartProvider>
   );
 }
 
