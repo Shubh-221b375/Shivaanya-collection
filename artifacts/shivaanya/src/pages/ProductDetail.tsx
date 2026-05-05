@@ -535,20 +535,27 @@ export default function ProductDetail() {
 
             {/* Quantity & Add to Cart */}
             <FadeUp delay={0.25}>
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <div className="flex items-center border border-black/10 rounded-full overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-4">
+                {/* Mobile: ~half width, left-aligned; sm+: natural compact width */}
+                <div className="self-start w-1/2 max-w-[200px] sm:w-auto sm:max-w-none flex border border-black/10 rounded-full overflow-hidden">
                   <button
+                    type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     id="qty-minus"
-                    className="px-5 py-3 text-black hover:bg-black/5 transition-colors text-sm"
+                    className="flex-1 min-w-0 flex items-center justify-center py-2.5 sm:py-3 px-1 sm:px-4 text-black hover:bg-black/5 transition-colors text-sm font-medium"
+                    aria-label="Decrease quantity"
                   >
                     −
                   </button>
-                  <span className="px-5 py-3 text-sm font-medium border-x border-black/10 min-w-[60px] text-center">{quantity}</span>
+                  <span className="flex-1 min-w-0 flex items-center justify-center py-2.5 sm:py-3 px-1 text-sm font-medium border-x border-black/10 tabular-nums">
+                    {quantity}
+                  </span>
                   <button
+                    type="button"
                     onClick={() => setQuantity(quantity + 1)}
                     id="qty-plus"
-                    className="px-5 py-3 text-black hover:bg-black/5 transition-colors text-sm"
+                    className="flex-1 min-w-0 flex items-center justify-center py-2.5 sm:py-3 px-1 sm:px-4 text-black hover:bg-black/5 transition-colors text-sm font-medium"
+                    aria-label="Increase quantity"
                   >
                     +
                   </button>
