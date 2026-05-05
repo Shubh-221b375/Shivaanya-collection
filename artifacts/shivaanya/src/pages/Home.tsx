@@ -973,7 +973,8 @@ function SatisfiedCustomersGallery() {
           </div>
         </FadeUp>
 
-        <div className="flex flex-col lg:flex-row h-[min(520px,68vh)] sm:h-[min(560px,58vh)] lg:h-[500px] w-full gap-2 lg:gap-4">
+        {/* Mobile only (max-md): ~60% taller total height than min(520px,68vh) so stacked strips show more image */}
+        <div className="flex flex-col lg:flex-row h-[min(520px,68vh)] md:h-[min(560px,58vh)] lg:h-[500px] max-md:h-[min(832px,109vh)] w-full gap-2 max-md:gap-3 lg:gap-4">
           {galleryImages.map((img, idx) => {
             const isActive = activeIndex === idx;
             
