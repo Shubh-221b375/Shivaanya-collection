@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { X, Loader2 } from "lucide-react";
 import { openRazorpayCheckout } from "@/lib/razorpayCheckout";
+import { submitOrderConfirmation, type OrderConfirmationPayload } from "@/lib/orderNotify";
 import { useAuth } from "@/context/AuthContext";
 import type { UserProfile } from "@/context/AuthContext";
 
@@ -16,6 +17,11 @@ export type CheckoutDeliveryDetails = {
   paymentMethod: "online" | "cod";
   /** Subtotal + shipping + COD handling fee when applicable. */
   totalPayableInr: number;
+  /** Official reference from `/api/order-notify` (or client fallback if API unavailable). */
+  orderNumber: string;
+  /** Whether automated email/SMS succeeded (when providers configured). */
+  notifyEmailSent?: boolean;
+  notifySmsSent?: boolean;
 };
 
 function normalizePhone(s: string): string {
@@ -153,7 +159,7 @@ export function CheckoutModal({
   const totalPayableInr =
     grandTotalInr + (paymentMethod === "cod" ? codHandlingFeeInr : 0);
 
-  const deliveryPayload = (): CheckoutDeliveryDetails => {
+  const deliveryPayload = (): Omit<CheckoutDeliveryDetails, "orderNumber"> => {
     const base = profileFromForm();
     if (shipElsewhere) {
       return {
@@ -169,6 +175,33 @@ export function CheckoutModal({
     }
     return { ...base, paymentMethod, totalPayableInr };
   };
+
+  const notifyPayloadFromSnapshot = (
+    snap: Omit<CheckoutDeliveryDetails, "orderNumber">,
+    extra?: { razorpayPaymentId?: string; razorpayOrderId?: string },
+  ): OrderConfirmationPayload => ({
+    customerName: snap.fullName,
+    email: snap.email,
+    phone: snap.phone,
+    addressLine1: snap.addressLine1,
+    addressLine2: snap.addressLine2,
+    city: snap.city,
+    state: snap.state,
+    pincode: snap.pincode,
+    paymentMethod: snap.paymentMethod,
+    totalPayableInr: snap.totalPayableInr,
+    bagTotalInr: grandTotalInr,
+    itemsSummary,
+    itemCount,
+    subtotalInr,
+    shippingInr,
+    codHandlingFeeInr: snap.paymentMethod === "cod" ? codHandlingFeeInr : 0,
+    shipElsewhere,
+    promoCode: appliedPromoCode ?? undefined,
+    promoDiscountInr: promoDiscountInr > 0 ? promoDiscountInr : undefined,
+    razorpayPaymentId: extra?.razorpayPaymentId,
+    razorpayOrderId: extra?.razorpayOrderId,
+  });
 
   const validate = (): string | null => {
     const p = deliveryPayload();
@@ -259,8 +292,19 @@ export function CheckoutModal({
     const details = deliveryPayload();
 
     if (details.paymentMethod === "cod") {
-      onCodComplete(details);
-      onClose();
+      setBusy(true);
+      try {
+        const confirmed = await submitOrderConfirmation(notifyPayloadFromSnapshot(details));
+        onCodComplete({
+          ...details,
+          orderNumber: confirmed.orderNumber,
+          notifyEmailSent: confirmed.emailSent,
+          notifySmsSent: confirmed.smsSent,
+        });
+        onClose();
+      } finally {
+        setBusy(false);
+      }
       return;
     }
 
@@ -344,13 +388,28 @@ export function CheckoutModal({
           contact: details.phone,
         },
         notes: { ...notes, payment: "prepaid" },
-        onSuccess: () => {
-          setBusy(false);
-          onPaymentSuccess();
-          onClose();
-          window.alert(
-            `Payment received: ₹${grandTotalInr.toLocaleString("en-IN")}. You will get confirmation on ${details.email}.`,
-          );
+        onSuccess: async (rpRes) => {
+          setBusy(true);
+          try {
+            const snap = deliveryPayload();
+            const confirmed = await submitOrderConfirmation(
+              notifyPayloadFromSnapshot(snap, {
+                razorpayPaymentId: rpRes.razorpay_payment_id,
+                razorpayOrderId: rpRes.razorpay_order_id ?? orderId,
+              }),
+            );
+            onPaymentSuccess();
+            onClose();
+            const notifyHint =
+              confirmed.emailSent || confirmed.smsSent
+                ? `\n\nConfirmation sent${confirmed.emailSent ? " to email" : ""}${confirmed.emailSent && confirmed.smsSent ? " and" : ""}${confirmed.smsSent ? " by SMS" : ""}.`
+                : "\n\nConfigure RESEND_* and TWILIO_* on the server for automated email/SMS.";
+            window.alert(
+              `Order ${confirmed.orderNumber} confirmed. Paid ₹${grandTotalInr.toLocaleString("en-IN")}.${notifyHint}`,
+            );
+          } finally {
+            setBusy(false);
+          }
         },
         onDismiss: () => setBusy(false),
       });

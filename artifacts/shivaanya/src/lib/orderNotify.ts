@@ -1,0 +1,85 @@
+/** Payload sent to `/api/order-notify` (server assigns official order number + sends email/SMS). */
+
+export type OrderConfirmationPayload = {
+  customerName: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  pincode: string;
+  paymentMethod: "cod" | "online";
+  /** Amount customer pays (COD includes handling fee). */
+  totalPayableInr: number;
+  /** Bag + shipping before COD fee (matches Razorpay / summary). */
+  bagTotalInr: number;
+  itemsSummary: string;
+  itemCount: number;
+  subtotalInr: number;
+  shippingInr: number;
+  codHandlingFeeInr: number;
+  shipElsewhere: boolean;
+  promoCode?: string | null;
+  promoDiscountInr?: number;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+};
+
+export type OrderConfirmationResult = {
+  orderNumber: string;
+  emailSent: boolean;
+  smsSent: boolean;
+};
+
+function orderNotifyApiUrl(): string {
+  const base = import.meta.env.BASE_URL ?? "/";
+  const path = "/api/order-notify";
+  if (!base || base === "/") return path;
+  const trimmed = base.replace(/\/$/, "");
+  return `${trimmed}${path}`;
+}
+
+/** Client fallback if the notify API is unreachable (still show an order ref). */
+export function generateFallbackOrderNumber(): string {
+  const d = new Date();
+  const y = String(d.getFullYear()).slice(2);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `SHV-${y}${m}${day}-${rand}`;
+}
+
+/**
+ * Registers the order server-side (official order no.) and triggers email + SMS when configured.
+ * Never throws — returns fallback order number if the API fails.
+ */
+export async function submitOrderConfirmation(payload: OrderConfirmationPayload): Promise<OrderConfirmationResult> {
+  try {
+    const res = await fetch(orderNotifyApiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      orderNumber?: string;
+      emailSent?: boolean;
+      smsSent?: boolean;
+      error?: string;
+    };
+    if (res.ok && typeof data.orderNumber === "string" && data.orderNumber.length > 0) {
+      return {
+        orderNumber: data.orderNumber,
+        emailSent: !!data.emailSent,
+        smsSent: !!data.smsSent,
+      };
+    }
+  } catch {
+    /* network / parse */
+  }
+  return {
+    orderNumber: generateFallbackOrderNumber(),
+    emailSent: false,
+    smsSent: false,
+  };
+}

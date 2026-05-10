@@ -93,12 +93,17 @@ export default function Cart() {
       clearCart();
       window.alert(
         [
-          `Cash on Delivery order placed for ₹${details.totalPayableInr.toLocaleString("en-IN")} (includes ₹${COD_HANDLING_FEE_INR.toLocaleString("en-IN")} COD handling).`,
+          `Order no: ${details.orderNumber}`,
+          `Cash on Delivery — ₹${details.totalPayableInr.toLocaleString("en-IN")} (includes ₹${COD_HANDLING_FEE_INR.toLocaleString("en-IN")} COD handling).`,
           "",
           `${details.fullName}`,
           `${details.addressLine1}${details.addressLine2 ? `, ${details.addressLine2}` : ""}`,
           `${details.city}, ${details.state} ${details.pincode}`,
           `Phone: ${details.phone}`,
+          "",
+          details.notifyEmailSent || details.notifySmsSent
+            ? `Confirmation sent${details.notifyEmailSent ? " to email" : ""}${details.notifyEmailSent && details.notifySmsSent ? " and" : ""}${details.notifySmsSent ? " by SMS" : ""}.`
+            : "Add RESEND_* and TWILIO_* on Vercel for automated email/SMS confirmations.",
           "",
           "Our team will call to confirm before dispatch.",
         ].join("\n"),
