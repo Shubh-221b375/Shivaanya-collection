@@ -467,14 +467,28 @@ export function CheckoutModal({
 
             {!isAuthenticated && authMode === "signin" && (
               <div className="space-y-2 pt-1">
-                <input
-                  type="password"
-                  className={inputCls}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  autoComplete="current-password"
-                />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Email</label>
+                  <input
+                    type="email"
+                    className={inputCls}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Password</label>
+                  <input
+                    type="password"
+                    className={inputCls}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    autoComplete="current-password"
+                  />
+                </div>
                 <button
                   type="button"
                   disabled={authBusy}
@@ -488,25 +502,56 @@ export function CheckoutModal({
             )}
 
             {!isAuthenticated && authMode === "signup" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                <input
-                  type="password"
-                  className={inputCls}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create password (6+ chars)"
-                  autoComplete="new-password"
-                />
-                <input
-                  type="password"
-                  className={inputCls}
-                  value={passwordConfirm}
-                  onChange={(e) => setPasswordConfirm(e.target.value)}
-                  placeholder="Confirm password"
-                  autoComplete="new-password"
-                />
-                <p className="sm:col-span-2 text-[10px] text-black/40">
-                  Fill delivery details below — we’ll save them to your account when you pay or place a COD order.
+              <div className="space-y-2 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Email</label>
+                  <input
+                    type="email"
+                    className={inputCls}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Mobile</label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    className={inputCls}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="10-digit mobile number"
+                    autoComplete="tel"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="space-y-1 sm:col-span-1">
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Password</label>
+                    <input
+                      type="password"
+                      className={inputCls}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create password (6+ chars)"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-1">
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Confirm</label>
+                    <input
+                      type="password"
+                      className={inputCls}
+                      value={passwordConfirm}
+                      onChange={(e) => setPasswordConfirm(e.target.value)}
+                      placeholder="Confirm password"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-black/40">
+                  Add your delivery address below — we’ll save it to your account when you pay or place a COD order.
                 </p>
               </div>
             )}
@@ -592,32 +637,40 @@ export function CheckoutModal({
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Email</label>
-              <input
-                type="email"
-                className={inputCls}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isAuthenticated || fieldDisabled}
-                autoComplete="email"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Mobile</label>
-              <input
-                type="tel"
-                inputMode="numeric"
-                className={inputCls}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="10-digit number"
-                required
-                disabled={fieldDisabled}
-                autoComplete="tel"
-              />
-            </div>
+            {(isAuthenticated || authMode === "guest") && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Email</label>
+                <input
+                  type="email"
+                  className={inputCls}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={fieldDisabled}
+                  autoComplete="email"
+                />
+              </div>
+            )}
+            {(isAuthenticated || authMode === "guest" || authMode === "signin") && (
+              <div
+                className={`space-y-1 ${
+                  !(isAuthenticated || authMode === "guest") && authMode === "signin" ? "sm:col-span-2" : ""
+                }`}
+              >
+                <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-black/50">Mobile</label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  className={inputCls}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="10-digit number"
+                  required
+                  disabled={fieldDisabled}
+                  autoComplete="tel"
+                />
+              </div>
+            )}
           </div>
 
           {!shipElsewhere && (
