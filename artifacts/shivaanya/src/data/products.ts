@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { importedWebsiteProducts } from "./importedWebsiteProducts";
+import { refineImportedProductColors } from "@/lib/inferColorsFromImagePaths";
 
 /** Same URL twice (or duplicate assets) — keep first occurrence only. */
 export function dedupeImages(urls: string[]): string[] {
@@ -452,7 +453,7 @@ function resolveCatalogListingHero(product: Product): Product {
 
 /** PDP fixes for scraped imports missing colour grids (swatches ↔ gallery URLs). */
 function applyImportedProductOverrides(p: Product): Product {
-  let out: Product = { ...p };
+  let out = refineImportedProductColors({ ...p });
 
   if (out.id === 123 && `${out.imageUrl}${out.images?.join("")}`.includes("ram-102-price")) {
     const baseDir =
@@ -591,7 +592,7 @@ const curatedMockProducts: Product[] = [
     description: "Flowy designer anarkali with graceful flare and festive aesthetics, complemented by live model motion preview.",
     fabric: "Soft Georgette Blend",
     listingHeroImage: "/media/user-products/product4/img-07.webp",
-    colors: ["Rani", "Black", "Sky Blue", "Lavender"],
+    colors: ["As shown"],
     sizes: ["S", "M", "L", "XL", "XXL"],
     rating: 4.7,
     reviewCount: 92,
@@ -695,7 +696,7 @@ const curatedMockProducts: Product[] = [
     categoryName: "Suits",
     description: "Contemporary ethnic set with mirror-inspired detailing, crafted for festive parties and wedding functions.",
     fabric: "Soft Chinon",
-    colors: ["Olive", "Black", "Hot Pink", "Lavender"],
+    colors: ["As shown"],
     sizes: ["S", "M", "L", "XL", "XXL", "3XL"],
     rating: 4.9,
     reviewCount: 312,
