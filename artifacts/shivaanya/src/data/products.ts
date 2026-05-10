@@ -552,9 +552,9 @@ const curatedMockProducts: Product[] = [
     ]),
     categoryName: "Lehengas",
     description:
-      "Premium readymade lehenga choli for wedding and festive wear: full-stitched lehenga and blouse in Pure Simmer Vichitra with Kali pattern stitching, cotton lining, and front-hook blouse. Offered in Purple and Maroon—use the gallery and colour swatches to confirm each shade on screen.",
+      "Premium readymade lehenga choli for wedding and festive wear: full-stitched lehenga and blouse in Pure Simmer Vichitra with Kali pattern stitching, cotton lining, and front-hook blouse. Offered in Cream and Maroon—use the gallery and colour swatches to confirm each shade on screen.",
     fabric: "Pure Simmer Vichitra (lehenga); Position jequard blouse with cotton lining",
-    colors: ["Purple", "Maroon"],
+    colors: ["Cream", "Maroon"],
     colorGalleryImages: [
       "/media/user-products/product2/img-02.webp",
       "/media/user-products/product2/img-03.webp",
