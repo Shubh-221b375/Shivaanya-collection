@@ -8,8 +8,12 @@ type RazorpayHandlerResponse = {
 
 export type OpenRazorpayOptions = {
   keyId: string;
-  /** Total in INR (rupees). Converted to paise for Razorpay. */
+  /** Total in INR (rupees). Used when `orderId` is omitted (legacy). */
   amountInr: number;
+  /** Server-created order id — Checkout amount is locked to this order. */
+  orderId?: string;
+  /** Paise total; required when `orderId` is set (must match order). */
+  amountPaise?: number;
   merchantName?: string;
   description?: string;
   prefill?: { name?: string; email?: string; contact?: string };
@@ -38,8 +42,9 @@ function loadRazorpayScript(): Promise<void> {
 }
 
 /**
- * Opens Razorpay Standard Checkout with a fixed amount (no manual typing).
- * Uses Key ID only (`VITE_RAZORPAY_KEY_ID`). Verify payments on your server with the secret for production.
+ * Opens Razorpay Standard Checkout.
+ * Prefer `orderId` + `amountPaise` from POST /api/create-razorpay-order (secret stays on server).
+ * Legacy: amount only via `amountInr` when no order (not recommended for production).
  */
 export async function openRazorpayCheckout(opts: OpenRazorpayOptions): Promise<void> {
   const w = window as Window & { Razorpay?: new (o: object) => { open: () => void; on: (e: string, fn: () => void) => void } };
@@ -47,12 +52,15 @@ export async function openRazorpayCheckout(opts: OpenRazorpayOptions): Promise<v
   const Razorpay = w.Razorpay;
   if (!Razorpay) throw new Error("Razorpay unavailable");
 
-  const paise = Math.max(100, Math.round(opts.amountInr * 100));
+  const paise = opts.orderId
+    ? Math.max(100, Math.round(Number(opts.amountPaise)))
+    : Math.max(100, Math.round(opts.amountInr * 100));
 
   const instance = new Razorpay({
     key: opts.keyId,
     amount: String(paise),
     currency: "INR",
+    ...(opts.orderId ? { order_id: opts.orderId } : {}),
     name: opts.merchantName ?? "Shivaanya Collection",
     description: opts.description ?? "Order payment",
     prefill: opts.prefill ?? {},

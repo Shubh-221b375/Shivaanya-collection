@@ -1,9 +1,9 @@
 import { useRef, useState, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, useInView } from "framer-motion";
-import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, Plus, Minus, Loader2 } from "lucide-react";
+import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, Plus, Minus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { openRazorpayCheckout } from "@/lib/razorpayCheckout";
+import { CheckoutModal, type CheckoutDeliveryDetails } from "@/components/checkout/CheckoutModal";
 import { mediaUrl } from "@/lib/mediaUrl";
 
 /** Nationwide shipping rule shown in Order Summary / Razorpay totals. */
@@ -33,56 +33,36 @@ export default function Cart() {
   const grandTotalInr = total + shippingInr;
   const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID?.trim() ?? "";
 
-  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const handleRazorpayCheckout = useCallback(async () => {
-    if (!razorpayKeyId) {
-      setCheckoutError(
-        "Add your Razorpay Key Id to the environment as VITE_RAZORPAY_KEY_ID (see Razorpay Dashboard → Account & Settings → API Keys → Key Id). Restart the dev server after saving .env.local.",
-      );
-      return;
-    }
-    setCheckoutError(null);
-    setCheckoutBusy(true);
-    try {
-      const summary = items
-        .map((i) => `${i.productName.slice(0, 40)}×${i.quantity}`)
-        .join("; ")
-        .slice(0, 250);
+  const itemsSummary = items
+    .map((i) => `${i.productName.slice(0, 40)}×${i.quantity}`)
+    .join("; ")
+    .slice(0, 250);
 
-      await openRazorpayCheckout({
-        keyId: razorpayKeyId,
-        amountInr: grandTotalInr,
-        merchantName: "Shivaanya Collection",
-        description: `Order — ${itemCount} item(s)`,
-        notes: {
-          items: summary,
-          subtotal_inr: String(total),
-          shipping_inr: String(shippingInr),
-        },
-        onSuccess: () => {
-          clearCart();
-          window.alert(
-            `Payment submitted for ₹${grandTotalInr.toLocaleString("en-IN")}. You will receive confirmation from the store.`,
-          );
-        },
-        onDismiss: () => {},
-      });
-    } catch (e) {
-      setCheckoutError(e instanceof Error ? e.message : "Could not open Razorpay. Try again.");
-    } finally {
-      setCheckoutBusy(false);
-    }
-  }, [
-    razorpayKeyId,
-    grandTotalInr,
-    itemCount,
-    items,
-    total,
-    shippingInr,
-    clearCart,
-  ]);
+  const handleCodComplete = useCallback(
+    (details: CheckoutDeliveryDetails) => {
+      clearCart();
+      window.alert(
+        [
+          `Cash on Delivery order placed for ₹${grandTotalInr.toLocaleString("en-IN")}.`,
+          "",
+          `${details.fullName}`,
+          `${details.addressLine1}${details.addressLine2 ? `, ${details.addressLine2}` : ""}`,
+          `${details.city}, ${details.state} ${details.pincode}`,
+          `Phone: ${details.phone}`,
+          "",
+          "Our team will call to confirm before dispatch.",
+        ].join("\n"),
+      );
+    },
+    [clearCart, grandTotalInr],
+  );
+
+  const handlePaymentSuccess = useCallback(() => {
+    clearCart();
+  }, [clearCart]);
 
   return (
     <div className="min-h-screen bg-white pt-0">
@@ -227,23 +207,34 @@ export default function Cart() {
                   <button
                     type="button"
                     id="checkout-btn"
-                    disabled={checkoutBusy}
-                    onClick={handleRazorpayCheckout}
-                    className="w-full bg-black text-white py-4 text-xs font-semibold tracking-[0.2em] uppercase rounded-full hover:bg-black/80 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:pointer-events-none"
+                    onClick={() => {
+                      setCheckoutError(null);
+                      setCheckoutOpen(true);
+                    }}
+                    className="w-full bg-black text-white py-4 text-xs font-semibold tracking-[0.2em] uppercase rounded-full hover:bg-black/80 transition-all flex items-center justify-center gap-2 group"
                   >
-                    {checkoutBusy ? (
-                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                    ) : (
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    )}
-                    Pay ₹{grandTotalInr.toLocaleString("en-IN")} with Razorpay
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    Proceed to checkout
                   </button>
 
                   <p className="text-[10px] text-black/35 text-center mt-2 leading-relaxed">
-                    {razorpayKeyId
-                      ? "Checkout opens with bag total + shipping prefilled — Razorpay handles the amount automatically."
-                      : "Create .env.local next to package.json with VITE_RAZORPAY_KEY_ID=your_key from Razorpay Dashboard, then restart npm run dev."}
+                    Enter delivery details, then pay online (exact cart total) or choose COD. For online payments, add{" "}
+                    <code className="text-[9px]">VITE_RAZORPAY_KEY_ID</code> and on Vercel also{" "}
+                    <code className="text-[9px]">RAZORPAY_KEY_SECRET</code> (server only).
                   </p>
+
+                  <CheckoutModal
+                    open={checkoutOpen}
+                    onClose={() => setCheckoutOpen(false)}
+                    grandTotalInr={grandTotalInr}
+                    subtotalInr={total}
+                    shippingInr={shippingInr}
+                    itemCount={itemCount}
+                    itemsSummary={itemsSummary}
+                    razorpayKeyId={razorpayKeyId}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onCodComplete={handleCodComplete}
+                  />
 
                   <div className="mt-6 pt-6 border-t border-black/5 space-y-3">
                     {[
