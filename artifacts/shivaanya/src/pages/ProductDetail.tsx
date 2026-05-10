@@ -274,10 +274,13 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!product || !selectedSize || !selectedColor) return;
+    const variant = colorVariants.find((v) => v.name === selectedColor);
+    const lineImage =
+      variant?.image?.trim() ? variant.image : product.imageUrl;
     addItem({
       productId: product.id,
       productName: product.name,
-      productImage: product.imageUrl,
+      productImage: lineImage,
       price: product.price,
       color: selectedColor,
       size: selectedSize,
