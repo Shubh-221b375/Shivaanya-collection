@@ -2,6 +2,41 @@
  * Vercel Serverless — creates a Razorpay Order so Checkout shows the exact cart total.
  * Vercel env (never commit): RAZORPAY_KEY_SECRET, RAZORPAY_KEY_ID (optional if VITE_RAZORPAY_KEY_ID is set for server).
  */
+async function parseJsonBody(req) {
+  if (req.body !== undefined && req.body !== null) {
+    if (Buffer.isBuffer(req.body)) {
+      try {
+        return JSON.parse(req.body.toString("utf8") || "{}");
+      } catch {
+        return null;
+      }
+    }
+    if (typeof req.body === "string") {
+      try {
+        return JSON.parse(req.body || "{}");
+      } catch {
+        return null;
+      }
+    }
+    if (typeof req.body === "object") {
+      return req.body;
+    }
+  }
+  return await new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      try {
+        const raw = Buffer.concat(chunks).toString("utf8");
+        resolve(JSON.parse(raw || "{}"));
+      } catch {
+        resolve(null);
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
 async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
 
@@ -20,13 +55,9 @@ async function handler(req, res) {
     });
   }
 
-  let body = req.body;
-  if (typeof body === "string") {
-    try {
-      body = JSON.parse(body || "{}");
-    } catch {
-      return res.status(400).json({ error: "Invalid JSON body" });
-    }
+  const body = await parseJsonBody(req);
+  if (body === null) {
+    return res.status(400).json({ error: "Invalid JSON body" });
   }
 
   const amountPaise = Number(body.amountPaise);

@@ -5,10 +5,20 @@ import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, Plus, Minus } from "lucide-
 import { useCart } from "@/context/CartContext";
 import { CheckoutModal, type CheckoutDeliveryDetails } from "@/components/checkout/CheckoutModal";
 import { mediaUrl } from "@/lib/mediaUrl";
+import {
+  discountInrForHello10,
+  FIRST_ORDER_PROMO_CODE,
+  FIRST_ORDER_PROMO_PERCENT,
+  hasCompletedFirstOrder,
+  markFirstOrderCompleted,
+  normalizePromoInput,
+} from "@/lib/firstOrderPromo";
 
 /** Nationwide shipping rule shown in Order Summary / Razorpay totals. */
 const FREE_SHIPPING_THRESHOLD_INR = 5000;
 const STANDARD_SHIPPING_INR = 199;
+/** Added to bag + shipping when customer chooses Cash on Delivery. */
+const COD_HANDLING_FEE_INR = 150;
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -30,11 +40,44 @@ export default function Cart() {
   const isEmpty = items.length === 0;
   const shippingFree = total >= FREE_SHIPPING_THRESHOLD_INR;
   const shippingInr = shippingFree ? 0 : STANDARD_SHIPPING_INR;
-  const grandTotalInr = total + shippingInr;
-  const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID?.trim() ?? "";
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [promoInput, setPromoInput] = useState("");
+  const [hello10Active, setHello10Active] = useState(false);
+  const [promoBanner, setPromoBanner] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  const promoDiscountInr = hello10Active ? discountInrForHello10(total) : 0;
+  const subtotalAfterPromo = Math.max(0, total - promoDiscountInr);
+  const grandTotalInr = subtotalAfterPromo + shippingInr;
+  const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID?.trim() ?? "";
+
+  const applyPromo = () => {
+    const code = normalizePromoInput(promoInput);
+    if (!code) {
+      setPromoBanner({ kind: "err", text: "Enter a promo code." });
+      return;
+    }
+    if (code !== FIRST_ORDER_PROMO_CODE) {
+      setPromoBanner({ kind: "err", text: "That code isn't valid." });
+      return;
+    }
+    if (hasCompletedFirstOrder()) {
+      setPromoBanner({ kind: "err", text: "HELLO10 is only valid for your 1st order." });
+      setHello10Active(false);
+      return;
+    }
+    setHello10Active(true);
+    setPromoBanner({
+      kind: "ok",
+      text: `${FIRST_ORDER_PROMO_CODE} applied — ${FIRST_ORDER_PROMO_PERCENT}% off your items.`,
+    });
+  };
+
+  const removePromo = () => {
+    setHello10Active(false);
+    setPromoBanner(null);
+  };
 
   const itemsSummary = items
     .map((i) => `${i.productName.slice(0, 40)}×${i.quantity}`)
@@ -43,10 +86,14 @@ export default function Cart() {
 
   const handleCodComplete = useCallback(
     (details: CheckoutDeliveryDetails) => {
+      markFirstOrderCompleted();
+      setHello10Active(false);
+      setPromoInput("");
+      setPromoBanner(null);
       clearCart();
       window.alert(
         [
-          `Cash on Delivery order placed for ₹${grandTotalInr.toLocaleString("en-IN")}.`,
+          `Cash on Delivery order placed for ₹${details.totalPayableInr.toLocaleString("en-IN")} (includes ₹${COD_HANDLING_FEE_INR.toLocaleString("en-IN")} COD handling).`,
           "",
           `${details.fullName}`,
           `${details.addressLine1}${details.addressLine2 ? `, ${details.addressLine2}` : ""}`,
@@ -57,10 +104,14 @@ export default function Cart() {
         ].join("\n"),
       );
     },
-    [clearCart, grandTotalInr],
+    [clearCart],
   );
 
   const handlePaymentSuccess = useCallback(() => {
+    markFirstOrderCompleted();
+    setHello10Active(false);
+    setPromoInput("");
+    setPromoBanner(null);
     clearCart();
   }, [clearCart]);
 
@@ -181,6 +232,20 @@ export default function Cart() {
                       <span>Subtotal ({itemCount} items)</span>
                       <span>₹{total.toLocaleString("en-IN")}</span>
                     </div>
+                    {promoDiscountInr > 0 ? (
+                      <div className="flex justify-between text-emerald-800 text-sm font-medium">
+                        <span>
+                          Promo ({FIRST_ORDER_PROMO_CODE}, {FIRST_ORDER_PROMO_PERCENT}% off)
+                        </span>
+                        <span>−₹{promoDiscountInr.toLocaleString("en-IN")}</span>
+                      </div>
+                    ) : null}
+                    {promoDiscountInr > 0 ? (
+                      <div className="flex justify-between text-black/60 text-xs">
+                        <span>Items after promo</span>
+                        <span>₹{subtotalAfterPromo.toLocaleString("en-IN")}</span>
+                      </div>
+                    ) : null}
                     <div className="flex justify-between text-black/50">
                       <span>Shipping</span>
                       <span className={shippingFree ? "text-green-600 font-medium" : ""}>
@@ -218,7 +283,8 @@ export default function Cart() {
                   </button>
 
                   <p className="text-[10px] text-black/35 text-center mt-2 leading-relaxed">
-                    Enter delivery details, then pay online (exact cart total) or choose COD. For online payments, add{" "}
+                    COD adds ₹{COD_HANDLING_FEE_INR.toLocaleString("en-IN")} handling (shown in checkout). Pay online for the
+                    bag total only. For online payments, add{" "}
                     <code className="text-[9px]">VITE_RAZORPAY_KEY_ID</code> and on Vercel also{" "}
                     <code className="text-[9px]">RAZORPAY_KEY_SECRET</code> (server only).
                   </p>
@@ -232,6 +298,9 @@ export default function Cart() {
                     itemCount={itemCount}
                     itemsSummary={itemsSummary}
                     razorpayKeyId={razorpayKeyId}
+                    codHandlingFeeInr={COD_HANDLING_FEE_INR}
+                    promoDiscountInr={promoDiscountInr}
+                    appliedPromoCode={hello10Active ? FIRST_ORDER_PROMO_CODE : null}
                     onPaymentSuccess={handlePaymentSuccess}
                     onCodComplete={handleCodComplete}
                   />
@@ -257,15 +326,46 @@ export default function Cart() {
                       type="text"
                       placeholder="Enter code"
                       id="promo-input"
-                      className="flex-1 border border-black/10 px-4 py-3 text-sm bg-white focus:outline-none focus:border-black rounded-l-full"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          applyPromo();
+                        }
+                      }}
+                      disabled={hello10Active}
+                      className="flex-1 border border-black/10 px-4 py-3 text-sm bg-white focus:outline-none focus:border-black rounded-l-full disabled:opacity-60"
                     />
                     <button
+                      type="button"
                       id="promo-apply-btn"
-                      className="px-6 py-3 bg-black text-white text-xs font-semibold tracking-wider uppercase rounded-r-full hover:bg-black/80 transition-colors"
+                      onClick={applyPromo}
+                      disabled={hello10Active}
+                      className="px-6 py-3 bg-black text-white text-xs font-semibold tracking-wider uppercase rounded-r-full hover:bg-black/80 transition-colors disabled:opacity-50"
                     >
                       Apply
                     </button>
                   </div>
+                  {hello10Active ? (
+                    <button
+                      type="button"
+                      onClick={removePromo}
+                      className="mt-2 text-[11px] font-medium text-black/45 hover:text-black underline underline-offset-2"
+                    >
+                      Remove promo
+                    </button>
+                  ) : null}
+                  {promoBanner ? (
+                    <p
+                      className={`mt-3 text-xs leading-relaxed ${
+                        promoBanner.kind === "ok" ? "text-emerald-800" : "text-red-600"
+                      }`}
+                      role={promoBanner.kind === "err" ? "alert" : undefined}
+                    >
+                      {promoBanner.text}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </FadeUp>

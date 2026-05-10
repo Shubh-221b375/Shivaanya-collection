@@ -22,7 +22,7 @@ export function Navbar() {
 
   const navLinks = [
     { name: "Shop", path: "/shop" },
-    { name: "Contact", path: "#contact" },
+    { name: "Contact", path: "/contact" },
   ];
 
   return (

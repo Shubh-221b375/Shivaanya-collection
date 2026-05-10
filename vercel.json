@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "cd artifacts/shivaanya && npm install && npm run build",
+  "installCommand": "cd artifacts/shivaanya && npm install",
+  "outputDirectory": "artifacts/shivaanya/dist",
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

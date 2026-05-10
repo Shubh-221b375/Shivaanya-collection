@@ -9,6 +9,8 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { FloatingSocialLinks } from "@/components/layout/FloatingSocialLinks";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
+import Contact from "@/pages/Contact";
 
 function Router() {
   return (
@@ -19,6 +21,7 @@ function Router() {
         <Route path="/shop" component={Shop} />
         <Route path="/product/:id" component={ProductDetail} />
         <Route path="/cart" component={Cart} />
+        <Route path="/contact" component={Contact} />
         <Route component={NotFound} />
       </Switch>
       <Footer />
@@ -39,12 +42,14 @@ function ScrollToTopOnRouteChange() {
 
 function App() {
   return (
-    <CartProvider>
-      <WouterRouter base={import.meta.env.BASE_URL?.replace(/\/$/, "") || ""}>
-        <ScrollToTopOnRouteChange />
-        <Router />
-      </WouterRouter>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <WouterRouter base={import.meta.env.BASE_URL?.replace(/\/$/, "") || ""}>
+          <ScrollToTopOnRouteChange />
+          <Router />
+        </WouterRouter>
+      </CartProvider>
+    </AuthProvider>
   );
 }
 
