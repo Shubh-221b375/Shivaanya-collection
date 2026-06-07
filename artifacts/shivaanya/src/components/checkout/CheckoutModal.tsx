@@ -156,9 +156,8 @@ export function CheckoutModal({
     pincode: pincode.replace(/\D/g, "").slice(0, 6),
   });
 
-  const codShippingInr = paymentMethod === "cod" ? shippingInr : 0;
   const totalPayableInr =
-    grandTotalInr + codShippingInr + (paymentMethod === "cod" ? codHandlingFeeInr : 0);
+    grandTotalInr + (paymentMethod === "cod" ? codHandlingFeeInr : 0);
 
   const deliveryPayload = (): Omit<CheckoutDeliveryDetails, "orderNumber"> => {
     const base = profileFromForm();
@@ -191,11 +190,11 @@ export function CheckoutModal({
     pincode: snap.pincode,
     paymentMethod: snap.paymentMethod,
     totalPayableInr: snap.totalPayableInr,
-    bagTotalInr: grandTotalInr + (snap.paymentMethod === "cod" ? shippingInr : 0),
+    bagTotalInr: grandTotalInr,
     itemsSummary,
     itemCount,
     subtotalInr,
-    shippingInr: snap.paymentMethod === "cod" ? shippingInr : 0,
+    shippingInr: 0,
     codHandlingFeeInr: snap.paymentMethod === "cod" ? codHandlingFeeInr : 0,
     shipElsewhere,
     promoCode: appliedPromoCode ?? undefined,
@@ -467,9 +466,7 @@ export function CheckoutModal({
                   <span className="font-semibold text-black">₹{totalPayableInr.toLocaleString("en-IN")}</span>
                   <span className="text-black/40">
                     {" "}
-                    (bag
-                    {shippingInr > 0 ? ` + ₹${shippingInr.toLocaleString("en-IN")} shipping` : ""} + ₹
-                    {codHandlingFeeInr.toLocaleString("en-IN")} COD handling)
+                    (bag + ₹{codHandlingFeeInr.toLocaleString("en-IN")} COD handling)
                   </span>
                 </>
               ) : (
@@ -827,10 +824,8 @@ export function CheckoutModal({
                   </span>
                 </span>
                 <span className="block text-[11px] text-black/45 mt-1">
-                  On delivery you pay ₹{totalPayableInr.toLocaleString("en-IN")}
-                  {shippingInr > 0
-                    ? ` (includes ₹${shippingInr.toLocaleString("en-IN")} shipping and ₹${codHandlingFeeInr.toLocaleString("en-IN")} COD handling).`
-                    : ` (includes ₹${codHandlingFeeInr.toLocaleString("en-IN")} COD handling).`}
+                  On delivery you pay ₹{totalPayableInr.toLocaleString("en-IN")} (includes ₹
+                  {codHandlingFeeInr.toLocaleString("en-IN")} COD handling).
                 </span>
               </span>
             </label>

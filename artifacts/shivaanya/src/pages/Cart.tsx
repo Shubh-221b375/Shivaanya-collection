@@ -15,10 +15,7 @@ import {
 } from "@/lib/firstOrderPromo";
 import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
 
-/** COD-only shipping rule (online orders are not charged shipping). */
-const FREE_SHIPPING_THRESHOLD_INR = 5000;
-const STANDARD_SHIPPING_INR = 199;
-/** Added on top of bag + COD shipping when customer chooses Cash on Delivery. */
+/** COD handling fee added at checkout when customer chooses Cash on Delivery. */
 const COD_HANDLING_FEE_INR = 150;
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -39,8 +36,6 @@ function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 export default function Cart() {
   const { items, itemCount, total, removeItem, updateQuantity, clearCart } = useCart();
   const isEmpty = items.length === 0;
-  const shippingFree = total >= FREE_SHIPPING_THRESHOLD_INR;
-  const shippingInr = shippingFree ? 0 : STANDARD_SHIPPING_INR;
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -50,7 +45,7 @@ export default function Cart() {
 
   const promoDiscountInr = hello10Active ? discountInrForHello10(total) : 0;
   const subtotalAfterPromo = Math.max(0, total - promoDiscountInr);
-  /** Items after promo — online pay stops here; COD adds shipping + handling in checkout. */
+  /** Items after promo — online pay stops here; COD adds ₹150 handling in checkout. */
   const grandTotalInr = subtotalAfterPromo;
   const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID?.trim() ?? "";
 
@@ -254,17 +249,12 @@ export default function Cart() {
                       </div>
                     ) : null}
                     <div className="flex justify-between text-black/50">
-                      <span>Shipping (COD only)</span>
-                      <span className={shippingFree ? "text-green-600 font-medium" : ""}>
-                        {shippingFree ? "Free on orders ₹5,000+" : `₹${STANDARD_SHIPPING_INR.toLocaleString("en-IN")}`}
-                      </span>
+                      <span>COD handling (COD only)</span>
+                      <span>₹{COD_HANDLING_FEE_INR.toLocaleString("en-IN")}</span>
                     </div>
-                    {!shippingFree && (
-                      <p className="text-[10px] text-black/30 tracking-wider">
-                        COD orders under ₹{FREE_SHIPPING_THRESHOLD_INR.toLocaleString("en-IN")} add ₹
-                        {STANDARD_SHIPPING_INR.toLocaleString("en-IN")} shipping at checkout
-                      </p>
-                    )}
+                    <p className="text-[10px] text-black/30 tracking-wider">
+                      Added at checkout when you choose Cash on Delivery — not charged on online pay
+                    </p>
                     <div className="border-t border-black/5 pt-3 flex justify-between font-bold text-black">
                       <span>Total (pay online)</span>
                       <span className="text-lg">₹{grandTotalInr.toLocaleString("en-IN")}</span>
@@ -291,9 +281,8 @@ export default function Cart() {
                   </button>
 
                   <p className="text-[10px] text-black/35 text-center mt-2 leading-relaxed">
-                    Pay online for the bag total only — no shipping fee. COD adds shipping
-                    {!shippingFree ? ` (₹${STANDARD_SHIPPING_INR.toLocaleString("en-IN")})` : ""} plus ₹
-                    {COD_HANDLING_FEE_INR.toLocaleString("en-IN")} handling at checkout. For online payments, add{" "}
+                    Pay online for the bag total only. COD adds ₹{COD_HANDLING_FEE_INR.toLocaleString("en-IN")}{" "}
+                    handling at checkout. For online payments, add{" "}
                     <code className="text-[9px]">VITE_RAZORPAY_KEY_ID</code> and on Vercel also{" "}
                     <code className="text-[9px]">RAZORPAY_KEY_SECRET</code> (server only).
                   </p>
@@ -303,7 +292,7 @@ export default function Cart() {
                     onClose={() => setCheckoutOpen(false)}
                     grandTotalInr={grandTotalInr}
                     subtotalInr={total}
-                    shippingInr={shippingInr}
+                    shippingInr={0}
                     itemCount={itemCount}
                     itemsSummary={itemsSummary}
                     razorpayKeyId={razorpayKeyId}
