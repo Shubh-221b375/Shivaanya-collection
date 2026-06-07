@@ -29,6 +29,8 @@ export type OrderConfirmationPayload = {
 export type OrderConfirmationResult = {
   orderNumber: string;
   emailSent: boolean;
+  companyEmailSent?: boolean;
+  sheetUpdated?: boolean;
   smsSent: boolean;
 };
 
@@ -64,6 +66,8 @@ export async function submitOrderConfirmation(payload: OrderConfirmationPayload)
     const data = (await res.json().catch(() => ({}))) as {
       orderNumber?: string;
       emailSent?: boolean;
+      companyEmailSent?: boolean;
+      sheetUpdated?: boolean;
       smsSent?: boolean;
       error?: string;
     };
@@ -71,6 +75,8 @@ export async function submitOrderConfirmation(payload: OrderConfirmationPayload)
       return {
         orderNumber: data.orderNumber,
         emailSent: !!data.emailSent,
+        companyEmailSent: !!data.companyEmailSent,
+        sheetUpdated: !!data.sheetUpdated,
         smsSent: !!data.smsSent,
       };
     }

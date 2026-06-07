@@ -46,6 +46,11 @@ export function Footer() {
                   Contact
                 </Link>
               </li>
+              <li>
+                <Link href="/contact#returns" className="text-white/50 hover:text-white transition-colors text-sm">
+                  Returns
+                </Link>
+              </li>
             </ul>
           </div>
 

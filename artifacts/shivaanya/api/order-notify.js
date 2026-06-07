@@ -1,9 +1,11 @@
 /**
- * Vercel Serverless — assign order number + optional email (Resend) + SMS (Twilio).
+ * Vercel Serverless — assign order number + notifications.
  *
  * Env (Vercel, never commit):
- * - RESEND_API_KEY + RESEND_FROM_EMAIL — transactional email
- * - TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_SMS_FROM — SMS (E.164)
+ * - RESEND_API_KEY + RESEND_FROM_EMAIL — customer + company email (Resend)
+ * - ORDER_NOTIFY_EMAIL — company inbox(es), comma-separated
+ * - GOOGLE_SHEETS_WEBHOOK_URL + GOOGLE_SHEETS_WEBHOOK_SECRET — Apps Script web app (see scripts/google-sheets-order-webhook.gs)
+ * - TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_SMS_FROM — optional customer SMS
  */
 
 async function parseJsonBody(req) {
@@ -64,10 +66,35 @@ function toE164India(phoneDigits) {
   return "";
 }
 
+function parseNotifyEmails() {
+  const raw = process.env.ORDER_NOTIFY_EMAIL?.trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formatInr(n) {
+  return `₹${Math.round(Number(n) || 0).toLocaleString("en-IN")}`;
+}
+
 async function sendResendEmail({ to, subject, html }) {
   const key = process.env.RESEND_API_KEY?.trim();
   const from = process.env.RESEND_FROM_EMAIL?.trim();
   if (!key || !from) return false;
+
+  const recipients = (Array.isArray(to) ? to : [to]).map((s) => String(s).trim()).filter(Boolean);
+  if (!recipients.length) return false;
+
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -77,7 +104,7 @@ async function sendResendEmail({ to, subject, html }) {
       },
       body: JSON.stringify({
         from,
-        to: [to],
+        to: recipients,
         subject,
         html,
       }),
@@ -108,6 +135,149 @@ async function sendTwilioSms(toE164, body) {
       }),
     });
     return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function buildOrderRecord(orderNumber, fields) {
+  const {
+    customerName,
+    email,
+    phone,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    pincode,
+    paymentMethod,
+    totalPayableInr,
+    bagTotalInr,
+    itemsSummary,
+    itemCount,
+    subtotalInr,
+    shippingInr,
+    codHandlingFeeInr,
+    shipElsewhere,
+    promoCode,
+    promoDiscountInr,
+    razorpayPaymentId,
+    razorpayOrderId,
+  } = fields;
+
+  return {
+    orderNumber,
+    placedAt: new Date().toISOString(),
+    customerName,
+    email,
+    phone,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    pincode,
+    paymentMethod,
+    totalPayableInr: Math.round(totalPayableInr),
+    subtotalInr: Math.round(subtotalInr),
+    shippingInr: Math.round(shippingInr),
+    bagTotalInr: Math.round(bagTotalInr),
+    codHandlingFeeInr: Math.round(codHandlingFeeInr),
+    itemCount,
+    itemsSummary,
+    promoCode: promoCode || "",
+    promoDiscountInr: Math.round(promoDiscountInr),
+    shipElsewhere: shipElsewhere ? "Yes" : "No",
+    razorpayPaymentId: razorpayPaymentId || "",
+    razorpayOrderId: razorpayOrderId || "",
+  };
+}
+
+function buildCustomerEmailHtml(order) {
+  const addrBlock = [order.addressLine1, order.addressLine2, `${order.city}, ${order.state} ${order.pincode}`]
+    .map((s) => escapeHtml(s))
+    .filter((s) => s.length > 0)
+    .join("<br/>");
+
+  const payLine =
+    order.paymentMethod === "cod"
+      ? `Cash on Delivery — total due ${formatInr(order.totalPayableInr)} (includes ${formatInr(order.codHandlingFeeInr)} COD handling where applicable).`
+      : `Paid online — ${formatInr(order.totalPayableInr)}.`;
+
+  const promoLine =
+    order.promoCode && order.promoDiscountInr > 0
+      ? `<p>Promo: ${escapeHtml(order.promoCode)} (−${formatInr(order.promoDiscountInr)} on items)</p>`
+      : "";
+
+  const rpLine =
+    order.razorpayPaymentId || order.razorpayOrderId
+      ? `<p>Payment ref: ${escapeHtml(order.razorpayPaymentId || "—")} / Order: ${escapeHtml(order.razorpayOrderId || "—")}</p>`
+      : "";
+
+  return `
+<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111;">
+  <h1 style="font-size:18px;">Order confirmed — Shivaanya Collection</h1>
+  <p><strong>Order no:</strong> ${escapeHtml(order.orderNumber)}</p>
+  <p>Hi ${escapeHtml(order.customerName)}, thank you for shopping with us.</p>
+  <p>${payLine}</p>
+  ${promoLine}
+  ${rpLine}
+  <p><strong>Items (${order.itemCount}):</strong> ${escapeHtml(order.itemsSummary)}</p>
+  <p><strong>Deliver to:</strong><br/>${addrBlock}</p>
+  <p><strong>Ship to alternate address:</strong> ${order.shipElsewhere}</p>
+  <p style="font-size:12px;color:#666;">Subtotal ${formatInr(order.subtotalInr)} · Shipping ${formatInr(order.shippingInr)} · Bag total ${formatInr(order.bagTotalInr)}</p>
+  <p style="font-size:12px;color:#666;">We’ll send dispatch updates to this email and mobile when your order ships.</p>
+</body></html>`;
+}
+
+function buildCompanyEmailHtml(order) {
+  const addrBlock = [order.addressLine1, order.addressLine2, `${order.city}, ${order.state} ${order.pincode}`]
+    .map((s) => escapeHtml(s))
+    .filter((s) => s.length > 0)
+    .join("<br/>");
+
+  const paymentLabel = order.paymentMethod === "cod" ? "Cash on Delivery (COD)" : "Paid online (Razorpay)";
+
+  return `
+<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111;">
+  <h1 style="font-size:18px;">New website order — ${escapeHtml(order.orderNumber)}</h1>
+  <p style="font-size:13px;color:#444;">Placed at ${escapeHtml(order.placedAt)} (UTC)</p>
+  <table style="border-collapse:collapse;font-size:14px;margin:16px 0;">
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Customer</td><td><strong>${escapeHtml(order.customerName)}</strong></td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Email</td><td><a href="mailto:${escapeHtml(order.email)}">${escapeHtml(order.email)}</a></td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Phone</td><td><a href="tel:+91${escapeHtml(order.phone)}">+91 ${escapeHtml(order.phone)}</a></td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Payment</td><td>${escapeHtml(paymentLabel)}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Total due</td><td><strong>${formatInr(order.totalPayableInr)}</strong></td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Subtotal</td><td>${formatInr(order.subtotalInr)}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Shipping</td><td>${formatInr(order.shippingInr)}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">COD handling</td><td>${formatInr(order.codHandlingFeeInr)}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Promo</td><td>${order.promoCode ? `${escapeHtml(order.promoCode)} (−${formatInr(order.promoDiscountInr)})` : "—"}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#666;">Alternate address</td><td>${escapeHtml(order.shipElsewhere)}</td></tr>
+  </table>
+  <p><strong>Items (${order.itemCount}):</strong> ${escapeHtml(order.itemsSummary)}</p>
+  <p><strong>Deliver to:</strong><br/>${addrBlock}</p>
+  ${
+    order.razorpayPaymentId || order.razorpayOrderId
+      ? `<p style="font-size:13px;">Razorpay payment: ${escapeHtml(order.razorpayPaymentId || "—")} · Order: ${escapeHtml(order.razorpayOrderId || "—")}</p>`
+      : ""
+  }
+</body></html>`;
+}
+
+async function appendOrderToGoogleSheet(order) {
+  const url = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim();
+  if (!url) return false;
+
+  const secret = process.env.GOOGLE_SHEETS_WEBHOOK_SECRET?.trim() || "";
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret, ...order }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => ({}));
+    return data.ok !== false;
   } catch {
     return false;
   }
@@ -154,64 +324,63 @@ async function handler(req, res) {
   if (!Number.isFinite(totalPayableInr) || totalPayableInr < 1) return res.status(400).json({ error: "Invalid total" });
 
   const orderNumber = makeOrderNumber();
+  const order = buildOrderRecord(orderNumber, {
+    customerName,
+    email,
+    phone,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    pincode,
+    paymentMethod,
+    totalPayableInr,
+    bagTotalInr,
+    itemsSummary,
+    itemCount,
+    subtotalInr,
+    shippingInr,
+    codHandlingFeeInr,
+    shipElsewhere,
+    promoCode,
+    promoDiscountInr,
+    razorpayPaymentId,
+    razorpayOrderId,
+  });
 
-  const addrBlock = [addressLine1, addressLine2, `${city}, ${state} ${pincode}`]
-    .map((s) => escapeHtml(s))
-    .filter((s) => s.length > 0)
-    .join("<br/>");
+  const companyEmails = parseNotifyEmails();
+  const customerSubject = `Order ${orderNumber} confirmed — Shivaanya Collection`;
+  const companySubject = `New order ${orderNumber} — Shivaanya Collection`;
 
-  const payLine =
-    paymentMethod === "cod"
-      ? `Cash on Delivery — total due ₹${Math.round(totalPayableInr).toLocaleString("en-IN")} (includes ₹${Math.round(codHandlingFeeInr).toLocaleString("en-IN")} COD handling where applicable).`
-      : `Paid online — ₹${Math.round(totalPayableInr).toLocaleString("en-IN")}.`;
-
-  const promoLine =
-    promoCode && promoDiscountInr > 0
-      ? `<p>Promo: ${escapeHtml(promoCode)} (−₹${Math.round(promoDiscountInr).toLocaleString("en-IN")} on items)</p>`
-      : "";
-
-  const rpLine =
-    razorpayPaymentId || razorpayOrderId
-      ? `<p>Payment ref: ${escapeHtml(razorpayPaymentId || "—")} / Order: ${escapeHtml(razorpayOrderId || "—")}</p>`
-      : "";
-
-  const html = `
-<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111;">
-  <h1 style="font-size:18px;">Order confirmed — Shivaanya Collection</h1>
-  <p><strong>Order no:</strong> ${escapeHtml(orderNumber)}</p>
-  <p>Hi ${escapeHtml(customerName)}, thank you for shopping with us.</p>
-  <p>${payLine}</p>
-  ${promoLine}
-  ${rpLine}
-  <p><strong>Items (${itemCount}):</strong> ${escapeHtml(itemsSummary)}</p>
-  <p><strong>Deliver to:</strong><br/>${addrBlock}</p>
-  <p><strong>Ship to alternate address:</strong> ${shipElsewhere ? "Yes" : "No"}</p>
-  <p style="font-size:12px;color:#666;">Subtotal ₹${Math.round(subtotalInr).toLocaleString("en-IN")} · Shipping ₹${Math.round(shippingInr).toLocaleString("en-IN")} · Bag total ₹${Math.round(bagTotalInr).toLocaleString("en-IN")}</p>
-  <p style="font-size:12px;color:#666;">We’ll send dispatch updates to this email and mobile when your order ships.</p>
-</body></html>`;
-
-  const subject = `Order ${orderNumber} confirmed — Shivaanya Collection`;
-
-  const emailSent = await sendResendEmail({ to: email, subject, html });
-
-  const smsBody = `Shivaanya: Order ${orderNumber} confirmed. Total Rs.${Math.round(totalPayableInr)}. ${paymentMethod === "cod" ? "COD" : "Paid online"}. We'll update you on dispatch.`;
-  const e164 = toE164India(phone);
-  const smsSent = e164 ? await sendTwilioSms(e164, smsBody) : false;
+  const [emailSent, companyEmailSent, sheetUpdated, smsSent] = await Promise.all([
+    sendResendEmail({
+      to: email,
+      subject: customerSubject,
+      html: buildCustomerEmailHtml(order),
+    }),
+    companyEmails.length
+      ? sendResendEmail({
+          to: companyEmails,
+          subject: companySubject,
+          html: buildCompanyEmailHtml(order),
+        })
+      : Promise.resolve(false),
+    appendOrderToGoogleSheet(order),
+    (() => {
+      const smsBody = `Shivaanya: Order ${orderNumber} confirmed. Total Rs.${Math.round(totalPayableInr)}. ${paymentMethod === "cod" ? "COD" : "Paid online"}. We'll update you on dispatch.`;
+      const e164 = toE164India(phone);
+      return e164 ? sendTwilioSms(e164, smsBody) : Promise.resolve(false);
+    })(),
+  ]);
 
   return res.status(200).json({
     ok: true,
     orderNumber,
     emailSent,
+    companyEmailSent,
+    sheetUpdated,
     smsSent,
   });
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 module.exports = handler;

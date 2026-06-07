@@ -13,6 +13,7 @@ import {
   markFirstOrderCompleted,
   normalizePromoInput,
 } from "@/lib/firstOrderPromo";
+import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
 
 /** COD-only shipping rule (online orders are not charged shipping). */
 const FREE_SHIPPING_THRESHOLD_INR = 5000;
@@ -324,6 +325,8 @@ export default function Cart() {
                       </div>
                     ))}
                   </div>
+
+                  <ReturnPolicySection variant="compact" className="mt-4 bg-[#fafafa] border-black/5" />
                 </div>
 
                 {/* Promo code */}

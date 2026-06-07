@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Link } from "wouter";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight, Mail, MapPin, Phone, Instagram, Sparkles, Clock } from "lucide-react";
+import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -154,6 +155,8 @@ export default function Contact() {
           </div>
         </FadeUp>
       </section>
+
+      <ReturnPolicySection className="bg-[#fafafa]" />
     </div>
   );
 }

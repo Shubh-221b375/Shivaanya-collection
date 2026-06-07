@@ -10,6 +10,7 @@ import {
 } from "@/data/products";
 import { cn } from "@/lib/utils";
 import { mediaUrl } from "@/lib/mediaUrl";
+import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
 
 /* ──────────────────────────────── Shared Animations ───────────────────────────── */
 
@@ -915,7 +916,7 @@ function TrustBadges() {
   const badges = [
     { title: "Complimentary Delivery", desc: "On premium orders over ₹5,000", icon: Truck },
     { title: "Master Craftsmanship", desc: "Hand-finished by local artisans", icon: SparklesIcon },
-    { title: "Seamless Returns", desc: "7-day hassle-free exchanges", icon: RefreshCw },
+    { title: "Seamless Returns", desc: "7-day returns — unboxing video & tags required", icon: RefreshCw },
     { title: "Secure Transactions", desc: "100% encrypted checkout process", icon: ShieldCheck },
   ];
 
@@ -1055,6 +1056,7 @@ export default function Home() {
       <InstagramSection />
       <CTABanner />
       <TrustBadges />
+      <ReturnPolicySection />
     </div>
   );
 }

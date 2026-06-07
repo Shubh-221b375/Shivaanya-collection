@@ -1,3 +1,29 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+  <rect width="180" height="180" rx="36" fill="#0A0A0A"/>
+  <path
+    d="M90 34L92.2 42.8L101 45L92.2 47.2L90 56L87.8 47.2L79 45L87.8 42.8L90 34Z"
+    fill="#C9A962"
+  />
+  <path
+    d="M118 58L119.1 62.4L123.5 63.5L119.1 64.6L118 69L116.9 64.6L112.5 63.5L116.9 62.4L118 58Z"
+    fill="#C9A962"
+    opacity="0.85"
+  />
+  <path
+    d="M62 58L63.1 62.4L67.5 63.5L63.1 64.6L62 69L60.9 64.6L56.5 63.5L60.9 62.4L62 58Z"
+    fill="#C9A962"
+    opacity="0.85"
+  />
+  <text
+    x="90"
+    y="128"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="92"
+    font-weight="600"
+    fill="#FFFFFF"
+    letter-spacing="-2"
+  >
+    S
+  </text>
 </svg>

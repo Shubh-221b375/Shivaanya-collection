@@ -5,6 +5,7 @@ import { Star, ShoppingBag, Heart, ChevronLeft, ChevronRight, MapPin, Sparkles, 
 import { getProductById, getFilteredProducts, getListingCardImages, getProductVideoCropStyle, preferredSwatchIndexOrder, resolvedPdpColorLabels, dedupeImages, type Product } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { mediaUrl } from "@/lib/mediaUrl";
+import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
 
 type ColorVariant = {
   name: string;
@@ -601,7 +602,7 @@ export default function ProductDetail() {
               <div className="grid grid-cols-3 gap-3 py-6 border-t border-black/5">
                 {[
                   { icon: "📦", text: "Free Shipping", sub: "Orders over ₹5,000" },
-                  { icon: "↩", text: "Easy Returns", sub: "Within 7 days" },
+                  { icon: "↩", text: "Easy Returns", sub: "Within 7 days — see policy" },
                   { icon: "✦", text: "Handcrafted", sub: "Artisan certified" },
                 ].map((item) => (
                   <div key={item.text} className="text-center">
@@ -611,6 +612,7 @@ export default function ProductDetail() {
                   </div>
                 ))}
               </div>
+              <ReturnPolicySection variant="compact" className="mt-4" />
             </FadeUp>
           </div>
         </div>
