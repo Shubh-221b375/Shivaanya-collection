@@ -11,6 +11,7 @@ import { FloatingSocialLinks } from "@/components/layout/FloatingSocialLinks";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import Contact from "@/pages/Contact";
+import Orders from "@/pages/Orders";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
         <Route path="/shop" component={Shop} />
         <Route path="/product/:id" component={ProductDetail} />
         <Route path="/cart" component={Cart} />
+        <Route path="/orders" component={Orders} />
         <Route path="/contact" component={Contact} />
         <Route component={NotFound} />
       </Switch>

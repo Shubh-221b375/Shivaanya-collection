@@ -1,17 +1,28 @@
 /**
  * Shivaanya Collection — append website orders to Google Sheets
  *
- * Setup:
- * 1. Create a Google Sheet (e.g. "Shivaanya Orders").
- * 2. Extensions → Apps Script → paste this file.
- * 3. Set WEBHOOK_SECRET below (same value as GOOGLE_SHEETS_WEBHOOK_SECRET on Vercel).
- * 4. Deploy → New deployment → Type: Web app
+ * Your sheet:
+ * https://docs.google.com/spreadsheets/d/1BzA3Lq9mLGFD21TI_sk04mc8TJ_ITEhsb9YMInTChQ/edit
+ *
+ * Setup (one time):
+ * 1. Open the sheet above → Extensions → Apps Script
+ * 2. Delete any default Code.gs content → paste this entire file → Save
+ * 3. Set WEBHOOK_SECRET below (pick a long random string)
+ * 4. Run `setupOrderSheet` once (Run ▶) and allow permissions
+ * 5. Deploy → New deployment → Web app
  *    - Execute as: Me
  *    - Who has access: Anyone
- * 5. Copy the Web app URL → Vercel env GOOGLE_SHEETS_WEBHOOK_URL
+ * 6. Copy the Web app URL (ends with /exec)
+ * 7. Vercel → Settings → Environment Variables:
+ *    GOOGLE_SHEETS_WEBHOOK_URL = (paste URL)
+ *    GOOGLE_SHEETS_WEBHOOK_SECRET = (same as WEBHOOK_SECRET below)
+ * 8. Redeploy the Vercel site
  */
 
-const SHEET_NAME = "Orders";
+/** Tab that receives order rows — uses your existing Sheet1. */
+const SHEET_NAME = "Sheet1";
+
+/** Must match GOOGLE_SHEETS_WEBHOOK_SECRET on Vercel exactly. */
 const WEBHOOK_SECRET = "change-me-to-a-long-random-string";
 
 const HEADERS = [
@@ -40,6 +51,16 @@ const HEADERS = [
   "Razorpay Order ID",
 ];
 
+/** Run once from Apps Script editor to add column headers to Sheet1. */
+function setupOrderSheet() {
+  const sheet = getOrderSheet_();
+  sheet.clear();
+  sheet.appendRow(HEADERS);
+  sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+  sheet.setFrozenRows(1);
+  sheet.autoResizeColumns(1, HEADERS.length);
+}
+
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents || "{}");
@@ -47,11 +68,9 @@ function doPost(e) {
       return jsonResponse({ ok: false, error: "Unauthorized" });
     }
 
-    const sheet = getOrCreateSheet_(SHEET_NAME);
+    const sheet = getOrderSheet_();
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(HEADERS);
-      sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
-      sheet.setFrozenRows(1);
+      setupOrderSheet();
     }
 
     sheet.appendRow([
@@ -86,9 +105,16 @@ function doPost(e) {
   }
 }
 
-function getOrCreateSheet_(name) {
+/** Optional: open the web app URL in a browser — should return {"ok":true,"message":"Shivaanya order webhook ready"}. */
+function doGet() {
+  return jsonResponse({ ok: true, message: "Shivaanya order webhook ready" });
+}
+
+function getOrderSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(name) || ss.insertSheet(name);
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (sheet) return sheet;
+  return ss.insertSheet(SHEET_NAME);
 }
 
 function jsonResponse(obj) {

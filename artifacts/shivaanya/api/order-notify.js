@@ -4,8 +4,8 @@
  * Env (Vercel, never commit):
  * - RESEND_API_KEY + RESEND_FROM_EMAIL — customer + company email (Resend)
  * - ORDER_NOTIFY_EMAIL — company inbox(es), comma-separated
- * - GOOGLE_SHEETS_WEBHOOK_URL + GOOGLE_SHEETS_WEBHOOK_SECRET — Apps Script web app (see scripts/google-sheets-order-webhook.gs)
- * - TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_SMS_FROM — optional customer SMS
+ * - TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_SMS_FROM — customer SMS
+ * - TWILIO_NOTIFY_PHONE — optional company SMS alert (E.164, e.g. +918439192467)
  */
 
 async function parseJsonBody(req) {
@@ -89,11 +89,21 @@ function formatInr(n) {
 
 async function sendResendEmail({ to, subject, html }) {
   const key = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.RESEND_FROM_EMAIL?.trim();
-  if (!key || !from) return false;
+  const fromRaw = process.env.RESEND_FROM_EMAIL?.trim();
+  if (!key || !fromRaw) return false;
 
+  const from = fromRaw.includes("<") ? fromRaw : `Shivaanya Collection <${fromRaw}>`;
   const recipients = (Array.isArray(to) ? to : [to]).map((s) => String(s).trim()).filter(Boolean);
   if (!recipients.length) return false;
+
+  const replyTo = parseNotifyEmails()[0];
+  const payload = {
+    from,
+    to: recipients,
+    subject,
+    html,
+  };
+  if (replyTo) payload.reply_to = replyTo;
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -102,12 +112,7 @@ async function sendResendEmail({ to, subject, html }) {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from,
-        to: recipients,
-        subject,
-        html,
-      }),
+      body: JSON.stringify(payload),
     });
     return res.ok;
   } catch {
@@ -224,8 +229,9 @@ function buildCustomerEmailHtml(order) {
   <p><strong>Items (${order.itemCount}):</strong> ${escapeHtml(order.itemsSummary)}</p>
   <p><strong>Deliver to:</strong><br/>${addrBlock}</p>
   <p><strong>Ship to alternate address:</strong> ${order.shipElsewhere}</p>
-  <p style="font-size:12px;color:#666;">Subtotal ${formatInr(order.subtotalInr)} · Shipping ${formatInr(order.shippingInr)} · Bag total ${formatInr(order.bagTotalInr)}</p>
-  <p style="font-size:12px;color:#666;">We’ll send dispatch updates to this email and mobile when your order ships.</p>
+  <p style="font-size:12px;color:#666;">Subtotal ${formatInr(order.subtotalInr)} · Bag total ${formatInr(order.bagTotalInr)}</p>
+  <p style="font-size:13px;color:#333;margin-top:16px;">Our team will call you on <strong>+91 ${escapeHtml(order.phone)}</strong> to confirm before dispatch.</p>
+  <p style="font-size:12px;color:#666;">Questions? Reply to this email or WhatsApp us.</p>
 </body></html>`;
 }
 
@@ -350,9 +356,17 @@ async function handler(req, res) {
 
   const companyEmails = parseNotifyEmails();
   const customerSubject = `Order ${orderNumber} confirmed — Shivaanya Collection`;
-  const companySubject = `New order ${orderNumber} — Shivaanya Collection`;
+  const companySubject = `[New order] ${orderNumber} — ₹${Math.round(totalPayableInr).toLocaleString("en-IN")}`;
 
-  const [emailSent, companyEmailSent, sheetUpdated, smsSent] = await Promise.all([
+  const payLabel = paymentMethod === "cod" ? "COD" : "Paid online";
+  const siteBase = (process.env.ORDER_SITE_URL || process.env.VERCEL_URL || "").replace(/\/$/, "");
+  const ordersLink = siteBase ? ` Orders: ${siteBase.startsWith("http") ? siteBase : `https://${siteBase}`}/orders` : "";
+  const customerSms = `Shivaanya Collection: Order ${orderNumber} confirmed. Total Rs.${Math.round(totalPayableInr)} (${payLabel}). We'll call before dispatch.${ordersLink}`;
+
+  const companyNotifyPhone = process.env.TWILIO_NOTIFY_PHONE?.trim();
+  const companySms = `New order ${orderNumber}: ${customerName}, Rs.${Math.round(totalPayableInr)} (${payLabel}). ${phone}. ${itemsSummary.slice(0, 80)}`;
+
+  const [emailSent, companyEmailSent, sheetUpdated, smsSent, companySmsSent] = await Promise.all([
     sendResendEmail({
       to: email,
       subject: customerSubject,
@@ -367,10 +381,10 @@ async function handler(req, res) {
       : Promise.resolve(false),
     appendOrderToGoogleSheet(order),
     (() => {
-      const smsBody = `Shivaanya: Order ${orderNumber} confirmed. Total Rs.${Math.round(totalPayableInr)}. ${paymentMethod === "cod" ? "COD" : "Paid online"}. We'll update you on dispatch.`;
       const e164 = toE164India(phone);
-      return e164 ? sendTwilioSms(e164, smsBody) : Promise.resolve(false);
+      return e164 ? sendTwilioSms(e164, customerSms) : Promise.resolve(false);
     })(),
+    companyNotifyPhone ? sendTwilioSms(companyNotifyPhone, companySms) : Promise.resolve(false),
   ]);
 
   return res.status(200).json({
@@ -380,6 +394,7 @@ async function handler(req, res) {
     companyEmailSent,
     sheetUpdated,
     smsSent,
+    companySmsSent,
   });
 }
 

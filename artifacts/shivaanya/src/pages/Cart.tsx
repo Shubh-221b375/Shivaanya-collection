@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, useInView } from "framer-motion";
 import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, Plus, Minus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -14,9 +14,49 @@ import {
   normalizePromoInput,
 } from "@/lib/firstOrderPromo";
 import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
+import { saveOrder, type StoredOrder } from "@/lib/orderHistory";
+import type { CartItem } from "@/context/CartContext";
 
 /** COD handling fee added at checkout when customer chooses Cash on Delivery. */
 const COD_HANDLING_FEE_INR = 150;
+
+function buildStoredOrder(
+  details: CheckoutDeliveryDetails,
+  items: CartItem[],
+  subtotalInr: number,
+  promoDiscountInr: number,
+  appliedPromoCode: string | null,
+): StoredOrder {
+  return {
+    orderNumber: details.orderNumber,
+    placedAt: new Date().toISOString(),
+    paymentMethod: details.paymentMethod,
+    totalPayableInr: details.totalPayableInr,
+    subtotalInr,
+    codHandlingFeeInr: details.paymentMethod === "cod" ? COD_HANDLING_FEE_INR : 0,
+    promoCode: appliedPromoCode ?? undefined,
+    promoDiscountInr: promoDiscountInr > 0 ? promoDiscountInr : undefined,
+    items: items.map((i) => ({
+      productId: i.productId,
+      productName: i.productName,
+      productImage: i.productImage,
+      price: i.price,
+      color: i.color,
+      size: i.size,
+      quantity: i.quantity,
+    })),
+    fullName: details.fullName,
+    email: details.email,
+    phone: details.phone,
+    addressLine1: details.addressLine1,
+    addressLine2: details.addressLine2,
+    city: details.city,
+    state: details.state,
+    pincode: details.pincode,
+    notifyEmailSent: details.notifyEmailSent,
+    notifySmsSent: details.notifySmsSent,
+  };
+}
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -35,6 +75,7 @@ function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 
 export default function Cart() {
   const { items, itemCount, total, removeItem, updateQuantity, clearCart } = useCart();
+  const [, setLocation] = useLocation();
   const isEmpty = items.length === 0;
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -81,41 +122,34 @@ export default function Cart() {
     .join("; ")
     .slice(0, 250);
 
-  const handleCodComplete = useCallback(
+  const finalizeOrder = useCallback(
     (details: CheckoutDeliveryDetails) => {
+      saveOrder(
+        buildStoredOrder(details, items, total, promoDiscountInr, hello10Active ? FIRST_ORDER_PROMO_CODE : null),
+      );
       markFirstOrderCompleted();
       setHello10Active(false);
       setPromoInput("");
       setPromoBanner(null);
       clearCart();
-      window.alert(
-        [
-          `Order no: ${details.orderNumber}`,
-          `Cash on Delivery — ₹${details.totalPayableInr.toLocaleString("en-IN")} (includes ₹${COD_HANDLING_FEE_INR.toLocaleString("en-IN")} COD handling).`,
-          "",
-          `${details.fullName}`,
-          `${details.addressLine1}${details.addressLine2 ? `, ${details.addressLine2}` : ""}`,
-          `${details.city}, ${details.state} ${details.pincode}`,
-          `Phone: ${details.phone}`,
-          "",
-          details.notifyEmailSent || details.notifySmsSent
-            ? `Confirmation sent${details.notifyEmailSent ? " to email" : ""}${details.notifyEmailSent && details.notifySmsSent ? " and" : ""}${details.notifySmsSent ? " by SMS" : ""}.`
-            : "Add RESEND_* and TWILIO_* on Vercel for automated email/SMS confirmations.",
-          "",
-          "Our team will call to confirm before dispatch.",
-        ].join("\n"),
-      );
+      setLocation(`/orders?placed=${encodeURIComponent(details.orderNumber)}`);
     },
-    [clearCart],
+    [items, total, promoDiscountInr, hello10Active, clearCart, setLocation],
   );
 
-  const handlePaymentSuccess = useCallback(() => {
-    markFirstOrderCompleted();
-    setHello10Active(false);
-    setPromoInput("");
-    setPromoBanner(null);
-    clearCart();
-  }, [clearCart]);
+  const handleCodComplete = useCallback(
+    (details: CheckoutDeliveryDetails) => {
+      finalizeOrder(details);
+    },
+    [finalizeOrder],
+  );
+
+  const handleOnlineComplete = useCallback(
+    (details: CheckoutDeliveryDetails) => {
+      finalizeOrder(details);
+    },
+    [finalizeOrder],
+  );
 
   return (
     <div className="min-h-screen bg-white pt-0">
@@ -299,7 +333,7 @@ export default function Cart() {
                     codHandlingFeeInr={COD_HANDLING_FEE_INR}
                     promoDiscountInr={promoDiscountInr}
                     appliedPromoCode={hello10Active ? FIRST_ORDER_PROMO_CODE : null}
-                    onPaymentSuccess={handlePaymentSuccess}
+                    onOnlineComplete={handleOnlineComplete}
                     onCodComplete={handleCodComplete}
                   />
 

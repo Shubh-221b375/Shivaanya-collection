@@ -60,7 +60,7 @@ type Props = {
   /** Discount already reflected in `grandTotalInr` / payment amount (e.g. HELLO10). */
   promoDiscountInr?: number;
   appliedPromoCode?: string | null;
-  onPaymentSuccess: () => void;
+  onOnlineComplete: (details: CheckoutDeliveryDetails) => void;
   onCodComplete: (details: CheckoutDeliveryDetails) => void;
 };
 
@@ -76,7 +76,7 @@ export function CheckoutModal({
   codHandlingFeeInr,
   promoDiscountInr = 0,
   appliedPromoCode = null,
-  onPaymentSuccess,
+  onOnlineComplete,
   onCodComplete,
 }: Props) {
   const { user, isAuthenticated, signIn, signUp, signOut, updateProfile } = useAuth();
@@ -398,15 +398,13 @@ export function CheckoutModal({
                 razorpayOrderId: rpRes.razorpay_order_id ?? orderId,
               }),
             );
-            onPaymentSuccess();
+            onOnlineComplete({
+              ...snap,
+              orderNumber: confirmed.orderNumber,
+              notifyEmailSent: confirmed.emailSent,
+              notifySmsSent: confirmed.smsSent,
+            });
             onClose();
-            const notifyHint =
-              confirmed.emailSent || confirmed.smsSent
-                ? `\n\nConfirmation sent${confirmed.emailSent ? " to email" : ""}${confirmed.emailSent && confirmed.smsSent ? " and" : ""}${confirmed.smsSent ? " by SMS" : ""}.`
-                : "\n\nConfigure RESEND_* and TWILIO_* on the server for automated email/SMS.";
-            window.alert(
-              `Order ${confirmed.orderNumber} confirmed. Paid ₹${grandTotalInr.toLocaleString("en-IN")}.${notifyHint}`,
-            );
           } finally {
             setBusy(false);
           }

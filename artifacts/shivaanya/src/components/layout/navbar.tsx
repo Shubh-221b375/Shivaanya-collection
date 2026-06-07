@@ -17,11 +17,12 @@ export function Navbar() {
     setIsScrolled(latest > 50);
   });
 
-  const isDarkTopPage = location === "/" || location === "/shop" || location === "/cart";
+  const isDarkTopPage = location === "/" || location === "/shop" || location === "/cart" || location.startsWith("/orders");
   const textColorClass = isScrolled ? "text-black" : (isDarkTopPage ? "text-white" : "text-black");
 
   const navLinks = [
     { name: "Shop", path: "/shop" },
+    { name: "Orders", path: "/orders" },
     { name: "Contact", path: "/contact" },
   ];
 
