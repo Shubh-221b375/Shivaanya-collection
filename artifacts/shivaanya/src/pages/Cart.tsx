@@ -14,10 +14,10 @@ import {
   normalizePromoInput,
 } from "@/lib/firstOrderPromo";
 
-/** Nationwide shipping rule shown in Order Summary / Razorpay totals. */
+/** COD-only shipping rule (online orders are not charged shipping). */
 const FREE_SHIPPING_THRESHOLD_INR = 5000;
 const STANDARD_SHIPPING_INR = 199;
-/** Added to bag + shipping when customer chooses Cash on Delivery. */
+/** Added on top of bag + COD shipping when customer chooses Cash on Delivery. */
 const COD_HANDLING_FEE_INR = 150;
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -49,7 +49,8 @@ export default function Cart() {
 
   const promoDiscountInr = hello10Active ? discountInrForHello10(total) : 0;
   const subtotalAfterPromo = Math.max(0, total - promoDiscountInr);
-  const grandTotalInr = subtotalAfterPromo + shippingInr;
+  /** Items after promo — online pay stops here; COD adds shipping + handling in checkout. */
+  const grandTotalInr = subtotalAfterPromo;
   const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID?.trim() ?? "";
 
   const applyPromo = () => {
@@ -252,18 +253,19 @@ export default function Cart() {
                       </div>
                     ) : null}
                     <div className="flex justify-between text-black/50">
-                      <span>Shipping</span>
+                      <span>Shipping (COD only)</span>
                       <span className={shippingFree ? "text-green-600 font-medium" : ""}>
-                        {shippingFree ? "Free" : `₹${STANDARD_SHIPPING_INR.toLocaleString("en-IN")}`}
+                        {shippingFree ? "Free on orders ₹5,000+" : `₹${STANDARD_SHIPPING_INR.toLocaleString("en-IN")}`}
                       </span>
                     </div>
                     {!shippingFree && (
                       <p className="text-[10px] text-black/30 tracking-wider">
-                        Add ₹{(FREE_SHIPPING_THRESHOLD_INR - total).toLocaleString("en-IN")} more for free shipping
+                        COD orders under ₹{FREE_SHIPPING_THRESHOLD_INR.toLocaleString("en-IN")} add ₹
+                        {STANDARD_SHIPPING_INR.toLocaleString("en-IN")} shipping at checkout
                       </p>
                     )}
                     <div className="border-t border-black/5 pt-3 flex justify-between font-bold text-black">
-                      <span>Total</span>
+                      <span>Total (pay online)</span>
                       <span className="text-lg">₹{grandTotalInr.toLocaleString("en-IN")}</span>
                     </div>
                   </div>
@@ -288,8 +290,9 @@ export default function Cart() {
                   </button>
 
                   <p className="text-[10px] text-black/35 text-center mt-2 leading-relaxed">
-                    COD adds ₹{COD_HANDLING_FEE_INR.toLocaleString("en-IN")} handling (shown in checkout). Pay online for the
-                    bag total only. For online payments, add{" "}
+                    Pay online for the bag total only — no shipping fee. COD adds shipping
+                    {!shippingFree ? ` (₹${STANDARD_SHIPPING_INR.toLocaleString("en-IN")})` : ""} plus ₹
+                    {COD_HANDLING_FEE_INR.toLocaleString("en-IN")} handling at checkout. For online payments, add{" "}
                     <code className="text-[9px]">VITE_RAZORPAY_KEY_ID</code> and on Vercel also{" "}
                     <code className="text-[9px]">RAZORPAY_KEY_SECRET</code> (server only).
                   </p>

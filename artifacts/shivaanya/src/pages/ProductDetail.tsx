@@ -601,7 +601,7 @@ export default function ProductDetail() {
               <div className="grid grid-cols-3 gap-3 py-6 border-t border-black/5">
                 {[
                   { icon: "📦", text: "Free Shipping", sub: "Orders over ₹5,000" },
-                  { icon: "↩", text: "Easy Returns", sub: "Within 30 days" },
+                  { icon: "↩", text: "Easy Returns", sub: "Within 7 days" },
                   { icon: "✦", text: "Handcrafted", sub: "Artisan certified" },
                 ].map((item) => (
                   <div key={item.text} className="text-center">

@@ -915,7 +915,7 @@ function TrustBadges() {
   const badges = [
     { title: "Complimentary Delivery", desc: "On premium orders over ₹5,000", icon: Truck },
     { title: "Master Craftsmanship", desc: "Hand-finished by local artisans", icon: SparklesIcon },
-    { title: "Seamless Returns", desc: "30-day hassle-free exchanges", icon: RefreshCw },
+    { title: "Seamless Returns", desc: "7-day hassle-free exchanges", icon: RefreshCw },
     { title: "Secure Transactions", desc: "100% encrypted checkout process", icon: ShieldCheck },
   ];
 
