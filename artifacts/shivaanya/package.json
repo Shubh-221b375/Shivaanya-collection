@@ -8,7 +8,9 @@
     "build": "vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
     "catalog:sync": "node scripts/sync-catalog-media.mjs",
-    "catalog:import": "node scripts/import-website-products.mjs"
+    "catalog:import": "node scripts/import-website-products.mjs",
+    "catalog:verify-s3": "node scripts/verify-s3-catalog.mjs",
+    "catalog:publish-june2026": "node scripts/publish-june2026-catalog.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",

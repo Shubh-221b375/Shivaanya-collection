@@ -1,10 +1,17 @@
+/** Production catalog bucket (public read). Override with VITE_MEDIA_BASE_URL if you move CDN. */
+const PRODUCTION_MEDIA_BASE = "https://shivaanya-collection-media.s3.ap-south-1.amazonaws.com";
+
 /**
  * Remote media base (S3 website / CloudFront / custom domain). No trailing slash.
  * Example: https://d111111abcdef8.cloudfront.net  or  https://bucket.s3.ap-south-1.amazonaws.com
  *
- * When unset, paths stay relative to the site origin (Vite `public/` for local dev).
+ * When unset in dev, paths stay relative to the site origin (Vite `public/`).
+ * In production builds, defaults to the Shivaanya S3 bucket so images are not blocked by SPA rewrites.
  */
-const MEDIA_BASE = (import.meta.env.VITE_MEDIA_BASE_URL ?? "").trim().replace(/\/$/, "");
+const MEDIA_BASE = (
+  (import.meta.env.VITE_MEDIA_BASE_URL ?? "").trim() ||
+  (import.meta.env.PROD ? PRODUCTION_MEDIA_BASE : "")
+).replace(/\/$/, "");
 
 /**
  * Resolve a stored asset path for <img src>, <video src>, etc.
