@@ -54,3 +54,4 @@ artifacts/shivaanya/public/media/
 
 # Shivaanya Vite: local env (S3 base URL, Razorpay key, etc.)
 artifacts/shivaanya/.env.local
+artifacts/shivaanya/scripts/.june2026-media-manifest.json

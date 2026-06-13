@@ -17,6 +17,7 @@ import {
   materializeWebsiteLeafMedia,
   resolveDestCatalogRoot,
   sanitizeSlug,
+  MEDIA_EXT,
 } from "./lib/website-catalog-sync.mjs";
 
 const SITE_ROOT = path.resolve(import.meta.dirname, "..");
@@ -34,15 +35,50 @@ const FOLDER_MAP = [
   { code: "Code- LW 1390-20260613T070540Z-3-001", category: "Anarkalis" },
 ];
 
+function folderHasMedia(dir) {
+  try {
+    for (const name of fs.readdirSync(dir)) {
+      const ext = path.extname(name).toLowerCase();
+      if (MEDIA_EXT.has(ext)) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+function findMediaLeaf(folderAbs) {
+  if (folderHasMedia(folderAbs)) return folderAbs;
+  const stack = [folderAbs];
+  const leaves = [];
+  while (stack.length) {
+    const d = stack.pop();
+    for (const name of fs.readdirSync(d, { withFileTypes: true })) {
+      if (!name.isDirectory()) continue;
+      const sub = path.join(d, name.name);
+      if (folderHasMedia(sub)) leaves.push(sub);
+      else stack.push(sub);
+    }
+  }
+  if (!leaves.length) return null;
+  leaves.sort((a, b) => a.split(path.sep).length - b.split(path.sep).length);
+  return leaves[0];
+}
+
 function parseArgs() {
   const args = process.argv.slice(2);
   let source = process.env.JUNE2026_SOURCE?.trim() || "";
   let dryRun = false;
+  let localOnly = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--source" && args[i + 1]) source = args[++i];
     if (args[i] === "--dry-run") dryRun = true;
+    if (args[i] === "--local-only") localOnly = true;
   }
-  return { source: source ? path.resolve(source) : "", dryRun };
+  if (!source) {
+    source = path.resolve(SITE_ROOT, "..", "..");
+  }
+  return { source: path.resolve(source), dryRun, localOnly };
 }
 
 function findFolder(sourceRoot, code) {
@@ -55,29 +91,15 @@ function findFolder(sourceRoot, code) {
   return null;
 }
 
-function copyTree(src, dest) {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const name of fs.readdirSync(src)) {
-    const from = path.join(src, name);
-    const to = path.join(dest, name);
-    if (fs.statSync(from).isDirectory()) copyTree(from, to);
-    else fs.copyFileSync(from, to);
-  }
-}
-
-const { source, dryRun } = parseArgs();
-if (!source || !fs.existsSync(source)) {
-  console.error("Usage: node scripts/publish-june2026-catalog.mjs --source <folder-with-code-folders>");
-  console.error("Each code folder must contain photos/videos (any filenames — renamed to img001*, vdo001*).");
+const { source, dryRun, localOnly } = parseArgs();
+if (!fs.existsSync(source)) {
+  console.error("Source folder not found:", source);
   process.exit(1);
 }
 
-const staging = path.join(SITE_ROOT, ".catalog-staging");
-if (fs.existsSync(staging)) fs.rmSync(staging, { recursive: true, force: true });
-fs.mkdirSync(staging, { recursive: true });
-
 let synced = 0;
 const missing = [];
+const manifest = [];
 
 for (const { code, category } of FOLDER_MAP) {
   const leaf = findFolder(source, code);
@@ -85,25 +107,31 @@ for (const { code, category } of FOLDER_MAP) {
     missing.push(code);
     continue;
   }
+  const mediaLeaf = findMediaLeaf(leaf);
+  if (!mediaLeaf) {
+    console.warn("✗ no photos in", code);
+    continue;
+  }
   const relLeaf = `${category}/${code}`;
   const slug = sanitizeSlug(relLeaf);
   const destCat = category.replace(/\s+/g, "_").toLowerCase();
-  const stagedLeaf = path.join(staging, category, code);
-  copyTree(leaf, stagedLeaf);
   const ok = materializeWebsiteLeafMedia(DEST_ROOT, {
-    leafAbs: stagedLeaf,
+    leafAbs: mediaLeaf,
     slug,
     destCat,
   });
   if (ok) {
     synced++;
-    console.log("✓", code, "→", `/media/catalog/${destCat}/${slug}/`);
+    manifest.push({ code, category, slug, destCat, ...ok });
+    console.log("✓", code, "→", `/media/catalog/${destCat}/${slug}/`, `(${ok.imageUrls.length} imgs)`);
   } else {
     console.warn("✗ no photos in", code);
   }
 }
 
-fs.rmSync(staging, { recursive: true, force: true });
+const manifestPath = path.join(SITE_ROOT, "scripts", ".june2026-media-manifest.json");
+fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+console.log("Wrote manifest:", manifestPath);
 
 console.log(`\nMaterialized ${synced}/${FOLDER_MAP.length} products under ${DEST_ROOT}`);
 if (missing.length) {
@@ -114,8 +142,8 @@ const syncSrc = path.join(DEST_ROOT);
 const syncDest = `s3://${S3_BUCKET}/${S3_PREFIX}/`;
 console.log(`\nUpload command:\n  aws s3 sync "${syncSrc}" "${syncDest}" --acl public-read`);
 
-if (dryRun) {
-  console.log("\n(dry-run — skipping aws s3 sync)");
+if (dryRun || localOnly) {
+  console.log(localOnly ? "\n(local-only — skipping aws s3 sync)" : "\n(dry-run — skipping aws s3 sync)");
   process.exit(missing.length ? 1 : 0);
 }
 

@@ -6,7 +6,7 @@
   "outputDirectory": "artifacts/shivaanya/dist",
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|media/).*)",
       "destination": "/index.html"
     }
   ]
