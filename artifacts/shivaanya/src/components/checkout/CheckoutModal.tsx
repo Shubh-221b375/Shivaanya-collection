@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { X, Loader2 } from "lucide-react";
 import { openRazorpayCheckout } from "@/lib/razorpayCheckout";
-import { submitOrderConfirmation, type OrderConfirmationPayload } from "@/lib/orderNotify";
+import { submitOrderConfirmation, type OrderConfirmationPayload, type OrderLineNotify } from "@/lib/orderNotify";
 import { useAuth } from "@/context/AuthContext";
 import type { UserProfile } from "@/context/AuthContext";
 
@@ -54,6 +54,7 @@ type Props = {
   shippingInr: number;
   itemCount: number;
   itemsSummary: string;
+  orderLineItems?: OrderLineNotify[];
   razorpayKeyId: string;
   /** Extra rupees added for Cash on Delivery (shown next to COD option). */
   codHandlingFeeInr: number;
@@ -72,6 +73,7 @@ export function CheckoutModal({
   shippingInr,
   itemCount,
   itemsSummary,
+  orderLineItems,
   razorpayKeyId,
   codHandlingFeeInr,
   promoDiscountInr = 0,
@@ -192,6 +194,7 @@ export function CheckoutModal({
     totalPayableInr: snap.totalPayableInr,
     bagTotalInr: grandTotalInr,
     itemsSummary,
+    lineItems: orderLineItems,
     itemCount,
     subtotalInr,
     shippingInr: 0,

@@ -87,6 +87,27 @@ function formatInr(n) {
   return `₹${Math.round(Number(n) || 0).toLocaleString("en-IN")}`;
 }
 
+function formatLineItemsSummary(lineItems) {
+  if (!Array.isArray(lineItems) || !lineItems.length) return "";
+  return lineItems
+    .map((i) => {
+      const code = i?.productCode ? `[${clampStr(i.productCode, 120)}] ` : "";
+      const qty = Math.min(999, Math.max(1, parseInt(String(i?.quantity), 10) || 1));
+      return `${code}${clampStr(i?.productName, 80)} (${clampStr(i?.color, 24)}, ${clampStr(i?.size, 24)}) ×${qty}`;
+    })
+    .join("; ")
+    .slice(0, 900);
+}
+
+function extractProductCodes(lineItems) {
+  if (!Array.isArray(lineItems)) return "";
+  return lineItems
+    .map((i) => clampStr(i?.productCode, 120))
+    .filter(Boolean)
+    .join("; ")
+    .slice(0, 500);
+}
+
 async function sendResendEmail({ to, subject, html }) {
   const key = process.env.RESEND_API_KEY?.trim();
   const fromRaw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -159,6 +180,7 @@ function buildOrderRecord(orderNumber, fields) {
     totalPayableInr,
     bagTotalInr,
     itemsSummary,
+    productCodes,
     itemCount,
     subtotalInr,
     shippingInr,
@@ -189,6 +211,7 @@ function buildOrderRecord(orderNumber, fields) {
     codHandlingFeeInr: Math.round(codHandlingFeeInr),
     itemCount,
     itemsSummary,
+    productCodes,
     promoCode: promoCode || "",
     promoDiscountInr: Math.round(promoDiscountInr),
     shipElsewhere: shipElsewhere ? "Yes" : "No",
@@ -227,6 +250,11 @@ function buildCustomerEmailHtml(order) {
   ${promoLine}
   ${rpLine}
   <p><strong>Items (${order.itemCount}):</strong> ${escapeHtml(order.itemsSummary)}</p>
+  ${
+    order.productCodes
+      ? `<p><strong>Product codes:</strong> ${escapeHtml(order.productCodes)}</p>`
+      : ""
+  }
   <p><strong>Deliver to:</strong><br/>${addrBlock}</p>
   <p><strong>Ship to alternate address:</strong> ${order.shipElsewhere}</p>
   <p style="font-size:12px;color:#666;">Subtotal ${formatInr(order.subtotalInr)} · Bag total ${formatInr(order.bagTotalInr)}</p>
@@ -260,6 +288,11 @@ function buildCompanyEmailHtml(order) {
     <tr><td style="padding:4px 12px 4px 0;color:#666;">Alternate address</td><td>${escapeHtml(order.shipElsewhere)}</td></tr>
   </table>
   <p><strong>Items (${order.itemCount}):</strong> ${escapeHtml(order.itemsSummary)}</p>
+  ${
+    order.productCodes
+      ? `<p><strong>Product codes:</strong> ${escapeHtml(order.productCodes)}</p>`
+      : ""
+  }
   <p><strong>Deliver to:</strong><br/>${addrBlock}</p>
   ${
     order.razorpayPaymentId || order.razorpayOrderId
@@ -313,7 +346,10 @@ async function handler(req, res) {
   const paymentMethod = body.paymentMethod === "online" ? "online" : "cod";
   const totalPayableInr = Number(body.totalPayableInr);
   const bagTotalInr = Number(body.bagTotalInr);
-  const itemsSummary = clampStr(body.itemsSummary, 500);
+  const lineItems = Array.isArray(body.lineItems) ? body.lineItems.slice(0, 50) : [];
+  const itemsSummaryFromLines = formatLineItemsSummary(lineItems);
+  const itemsSummary = itemsSummaryFromLines || clampStr(body.itemsSummary, 900);
+  const productCodes = extractProductCodes(lineItems);
   const itemCount = Math.min(999, Math.max(0, parseInt(String(body.itemCount), 10) || 0));
   const subtotalInr = Number(body.subtotalInr);
   const shippingInr = Number(body.shippingInr);
@@ -343,6 +379,7 @@ async function handler(req, res) {
     totalPayableInr,
     bagTotalInr,
     itemsSummary,
+    productCodes,
     itemCount,
     subtotalInr,
     shippingInr,
@@ -364,7 +401,7 @@ async function handler(req, res) {
   const customerSms = `Shivaanya Collection: Order ${orderNumber} confirmed. Total Rs.${Math.round(totalPayableInr)} (${payLabel}). We'll call before dispatch.${ordersLink}`;
 
   const companyNotifyPhone = process.env.TWILIO_NOTIFY_PHONE?.trim();
-  const companySms = `New order ${orderNumber}: ${customerName}, Rs.${Math.round(totalPayableInr)} (${payLabel}). ${phone}. ${itemsSummary.slice(0, 80)}`;
+  const companySms = `New order ${orderNumber}: ${customerName}, Rs.${Math.round(totalPayableInr)} (${payLabel}). ${phone}. ${productCodes ? productCodes.slice(0, 60) + ". " : ""}${itemsSummary.slice(0, 60)}`;
 
   const [emailSent, companyEmailSent, sheetUpdated, smsSent, companySmsSent] = await Promise.all([
     sendResendEmail({

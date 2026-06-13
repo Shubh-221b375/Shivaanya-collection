@@ -1,5 +1,14 @@
 /** Payload sent to `/api/order-notify` (server assigns official order number + sends email/SMS). */
 
+export type OrderLineNotify = {
+  productCode?: string;
+  productName: string;
+  color: string;
+  size: string;
+  quantity: number;
+  price: number;
+};
+
 export type OrderConfirmationPayload = {
   customerName: string;
   email: string;
@@ -15,6 +24,8 @@ export type OrderConfirmationPayload = {
   /** Bag + shipping before COD fee (matches Razorpay / summary). */
   bagTotalInr: number;
   itemsSummary: string;
+  /** Structured lines for emails / sheet (includes product codes). */
+  lineItems?: OrderLineNotify[];
   itemCount: number;
   subtotalInr: number;
   shippingInr: number;
@@ -33,6 +44,26 @@ export type OrderConfirmationResult = {
   sheetUpdated?: boolean;
   smsSent: boolean;
 };
+
+/** Human-readable summary for email/SMS — includes product code when available. */
+export function buildOrderItemsSummary(
+  items: Array<{
+    productCode?: string;
+    productName: string;
+    color: string;
+    size: string;
+    quantity: number;
+  }>,
+): string {
+  return items
+    .map((i) => {
+      const codePrefix = i.productCode?.trim() ? `[${i.productCode.trim()}] ` : "";
+      const label = `${codePrefix}${i.productName} (${i.color}, ${i.size})`;
+      return `${label} ×${i.quantity}`;
+    })
+    .join("; ")
+    .slice(0, 900);
+}
 
 function orderNotifyApiUrl(): string {
   const base = import.meta.env.BASE_URL ?? "/";

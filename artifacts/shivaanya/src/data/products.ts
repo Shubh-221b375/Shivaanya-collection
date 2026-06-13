@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { importedWebsiteProducts } from "./importedWebsiteProducts";
+import { june2026CatalogProducts } from "./june2026CatalogProducts";
 import { refineImportedProductColors } from "@/lib/inferColorsFromImagePaths";
 
 /** Same URL twice (or duplicate assets) — keep first occurrence only. */
@@ -219,6 +220,8 @@ export function preferredSwatchIndexOrder(product: Pick<Product, "images" | "lis
 
 export interface Product {
   id: number;
+  /** Official catalogue folder / SKU code (sent on orders). */
+  productCode?: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -756,6 +759,7 @@ const curatedMockProducts: Product[] = [
 
 export const mockProducts: Product[] = [
   ...curatedMockProducts,
+  ...june2026CatalogProducts,
   ...importedWebsiteProducts
     .filter((p) => !isRedundantImportedProduct(p))
     .map(applyImportedProductOverrides),

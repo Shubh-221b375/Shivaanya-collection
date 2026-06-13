@@ -3,6 +3,8 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 export interface CartItem {
   id: number;
   productId: number;
+  /** Official catalogue code (folder name on S3). */
+  productCode?: string;
   productName: string;
   productImage: string;
   price: number;

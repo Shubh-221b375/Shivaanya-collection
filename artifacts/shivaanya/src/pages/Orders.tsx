@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Package, ArrowRight, ShoppingBag } from "lucide-react";
@@ -27,8 +27,9 @@ function placedOrderFromQuery(): string | null {
 }
 
 export default function Orders() {
-  const placedOrderNumber = placedOrderFromQuery();
-  const orders = useMemo(() => getOrders(), [placedOrderNumber]);
+  const [location] = useLocation();
+  const placedOrderNumber = useMemo(() => placedOrderFromQuery(), [location]);
+  const orders = useMemo(() => getOrders(), [location, placedOrderNumber]);
   const highlightedOrder = placedOrderNumber ? getOrderByNumber(placedOrderNumber) : undefined;
   const listOrders = highlightedOrder
     ? orders.filter((o) => o.orderNumber !== placedOrderNumber)

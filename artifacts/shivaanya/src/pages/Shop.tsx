@@ -206,7 +206,9 @@ export default function Shop() {
     if (sortBy === "price-asc") return a.price - b.price;
     if (sortBy === "price-desc") return b.price - a.price;
     if (sortBy === "rating") return b.rating - a.rating;
-    return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+    const score = (p: typeof a) => (p.isNew ? 4 : 0) + (p.isFeatured ? 2 : 0) + (p.isBestseller ? 1 : 0);
+    const diff = score(b) - score(a);
+    return diff !== 0 ? diff : b.id - a.id;
   });
 
   return (

@@ -280,6 +280,7 @@ export default function ProductDetail() {
       variant?.image?.trim() ? variant.image : product.imageUrl;
     addItem({
       productId: product.id,
+      productCode: product.productCode,
       productName: product.name,
       productImage: lineImage,
       price: product.price,

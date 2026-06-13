@@ -2,6 +2,7 @@ const STORAGE_ORDERS = "shivaanya_orders_v1";
 
 export type OrderLineItem = {
   productId: number;
+  productCode?: string;
   productName: string;
   productImage: string;
   price: number;

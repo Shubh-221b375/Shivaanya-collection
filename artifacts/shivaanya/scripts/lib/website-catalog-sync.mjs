@@ -27,7 +27,6 @@ export const SKIP_TOP = new Set([
   "Categories",
   "Dream_Bridal_look_section",
   "Our_story_section",
-  "Suits",
 ]);
 
 export const CATEGORY_NAME = {
@@ -35,6 +34,7 @@ export const CATEGORY_NAME = {
   Sarees: "Sarees",
   "Plazo Set": "Palazzo Sets",
   Anarkalis: "Anarkalis",
+  Suits: "Suits",
 };
 
 /** Matches import script — excludes duplicate / unused SKUs */

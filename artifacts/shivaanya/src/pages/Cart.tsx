@@ -16,9 +16,10 @@ import {
 import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
 import { saveOrder, type StoredOrder } from "@/lib/orderHistory";
 import type { CartItem } from "@/context/CartContext";
+import { buildOrderItemsSummary } from "@/lib/orderNotify";
 
 /** COD handling fee added at checkout when customer chooses Cash on Delivery. */
-const COD_HANDLING_FEE_INR = 150;
+const COD_HANDLING_FEE_INR = 100;
 
 function buildStoredOrder(
   details: CheckoutDeliveryDetails,
@@ -38,6 +39,7 @@ function buildStoredOrder(
     promoDiscountInr: promoDiscountInr > 0 ? promoDiscountInr : undefined,
     items: items.map((i) => ({
       productId: i.productId,
+      productCode: i.productCode,
       productName: i.productName,
       productImage: i.productImage,
       price: i.price,
@@ -86,7 +88,7 @@ export default function Cart() {
 
   const promoDiscountInr = hello10Active ? discountInrForHello10(total) : 0;
   const subtotalAfterPromo = Math.max(0, total - promoDiscountInr);
-  /** Items after promo — online pay stops here; COD adds ₹150 handling in checkout. */
+  /** Items after promo — online pay stops here; COD adds ₹100 handling in checkout. */
   const grandTotalInr = subtotalAfterPromo;
   const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID?.trim() ?? "";
 
@@ -117,10 +119,7 @@ export default function Cart() {
     setPromoBanner(null);
   };
 
-  const itemsSummary = items
-    .map((i) => `${i.productName.slice(0, 40)}×${i.quantity}`)
-    .join("; ")
-    .slice(0, 250);
+  const itemsSummary = buildOrderItemsSummary(items);
 
   const finalizeOrder = useCallback(
     (details: CheckoutDeliveryDetails) => {
@@ -329,6 +328,14 @@ export default function Cart() {
                     shippingInr={0}
                     itemCount={itemCount}
                     itemsSummary={itemsSummary}
+                    orderLineItems={items.map((i) => ({
+                      productCode: i.productCode,
+                      productName: i.productName,
+                      color: i.color,
+                      size: i.size,
+                      quantity: i.quantity,
+                      price: i.price,
+                    }))}
                     razorpayKeyId={razorpayKeyId}
                     codHandlingFeeInr={COD_HANDLING_FEE_INR}
                     promoDiscountInr={promoDiscountInr}

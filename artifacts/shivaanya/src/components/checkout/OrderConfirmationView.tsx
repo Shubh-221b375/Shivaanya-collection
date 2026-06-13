@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { CheckCircle2, Package, MapPin, CreditCard, ArrowRight, Mail, MessageSquare } from "lucide-react";
 import { type StoredOrder, formatOrderDate } from "@/lib/orderHistory";
@@ -11,6 +11,16 @@ type Props = {
 };
 
 export function OrderConfirmationView({ order, highlight = false }: Props) {
+  const [, setLocation] = useLocation();
+
+  const viewAllOrders = () => {
+    const base = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+    setLocation("/orders");
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${base}/orders`);
+    }
+  };
+
   const paymentLabel =
     order.paymentMethod === "cod"
       ? `Cash on Delivery — ₹${order.totalPayableInr.toLocaleString("en-IN")}`
@@ -133,6 +143,9 @@ export function OrderConfirmationView({ order, highlight = false }: Props) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-black line-clamp-2">{item.productName}</p>
+                {item.productCode ? (
+                  <p className="text-[10px] text-black/55 font-mono mt-1 break-all">{item.productCode}</p>
+                ) : null}
                 <p className="text-[10px] text-black/40 uppercase tracking-wider mt-1">
                   {item.color} · {item.size} · Qty {item.quantity}
                 </p>
@@ -154,12 +167,13 @@ export function OrderConfirmationView({ order, highlight = false }: Props) {
             Continue shopping
             <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link
-            href="/orders"
+          <button
+            type="button"
+            onClick={viewAllOrders}
             className="inline-flex items-center justify-center gap-2 flex-1 border border-black/15 text-black py-3.5 px-6 text-xs font-semibold tracking-[0.2em] uppercase rounded-full hover:bg-black/[0.03] transition-colors"
           >
             View all orders
-          </Link>
+          </button>
         </div>
       ) : null}
     </motion.div>
