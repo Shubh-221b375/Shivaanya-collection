@@ -369,19 +369,20 @@ function buildCompanyEmailHtml(order) {
 
 async function fetchAppsScriptWebhook(url, body) {
   const json = JSON.stringify(body);
-  const post = async (targetUrl) =>
-    fetch(targetUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: json,
-      redirect: "manual",
-    });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: json,
+    redirect: "manual",
+  });
 
-  let res = await post(url);
-  // Google Apps Script often 302s to googleusercontent.com — re-POST with body (fetch would drop it on redirect).
+  // Google Apps Script runs doPost, then 302s to googleusercontent.com with the JSON result.
+  // Must GET that URL — re-POSTing it returns 405.
   if ([301, 302, 303, 307, 308].includes(res.status)) {
     const loc = res.headers.get("location");
-    if (loc) res = await post(loc);
+    if (loc) {
+      return fetch(loc, { method: "GET", redirect: "follow" });
+    }
   }
   return res;
 }

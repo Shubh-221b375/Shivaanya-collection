@@ -31,7 +31,7 @@ async function postAppsScript(url, body) {
   let res = await post(url);
   if ([301, 302, 303, 307, 308].includes(res.status)) {
     const loc = res.headers.get("location");
-    if (loc) res = await post(loc);
+    if (loc) res = await fetch(loc, { method: "GET", redirect: "follow" });
   }
   return res;
 }
