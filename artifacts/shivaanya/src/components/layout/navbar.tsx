@@ -3,6 +3,7 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-
 import { ShoppingBag, Menu, X, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/context/CartContext";
 import { clearOrdersHighlight } from "@/lib/orderHistory";
 
 export function Navbar() {
