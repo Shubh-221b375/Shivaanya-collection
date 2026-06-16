@@ -104,22 +104,27 @@ export function OrderConfirmationView({ order, highlight = false }: Props) {
               Promo {order.promoCode}: −₹{order.promoDiscountInr!.toLocaleString("en-IN")}
             </p>
           ) : null}
-          {(order.notifyEmailSent || order.notifySmsSent) && (
+          {(highlight || order.notifyEmailSent || order.notifySmsSent) ? (
             <div className="mt-4 pt-3 border-t border-black/5 space-y-1.5 text-xs text-black/50">
               {order.notifyEmailSent ? (
-                <p className="flex items-center gap-2">
+                <p className="flex items-center gap-2 text-emerald-800">
                   <Mail className="h-3.5 w-3.5 shrink-0" />
-                  Confirmation email sent
+                  Confirmation email sent to {order.email}
                 </p>
-              ) : null}
+              ) : (
+                <p className="flex items-center gap-2 text-black/45">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  Confirmation will be sent to {order.email} — check inbox and spam
+                </p>
+              )}
               {order.notifySmsSent ? (
-                <p className="flex items-center gap-2">
+                <p className="flex items-center gap-2 text-emerald-800">
                   <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                  SMS confirmation sent
+                  SMS confirmation sent to +91 {order.phone}
                 </p>
               ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
