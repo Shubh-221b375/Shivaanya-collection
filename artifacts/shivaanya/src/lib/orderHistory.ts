@@ -1,4 +1,7 @@
 const STORAGE_ORDERS = "shivaanya_orders_v1";
+const STORAGE_HIGHLIGHT = "shivaanya_orders_highlight_v1";
+
+export const ORDERS_HIGHLIGHT_EVENT = "shivaanya-orders-highlight-changed";
 
 export type OrderLineItem = {
   productId: number;
@@ -72,5 +75,32 @@ export function formatOrderDate(iso: string): string {
     }).format(new Date(iso));
   } catch {
     return iso;
+  }
+}
+
+/** Fresh checkout success — show one order hero on My Orders until cleared. */
+export function getOrdersHighlight(): string | null {
+  try {
+    return sessionStorage.getItem(STORAGE_HIGHLIGHT);
+  } catch {
+    return null;
+  }
+}
+
+export function setOrdersHighlight(orderNumber: string): void {
+  try {
+    sessionStorage.setItem(STORAGE_HIGHLIGHT, orderNumber);
+    window.dispatchEvent(new Event(ORDERS_HIGHLIGHT_EVENT));
+  } catch {
+    /* private mode */
+  }
+}
+
+export function clearOrdersHighlight(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_HIGHLIGHT);
+    window.dispatchEvent(new Event(ORDERS_HIGHLIGHT_EVENT));
+  } catch {
+    /* private mode */
   }
 }

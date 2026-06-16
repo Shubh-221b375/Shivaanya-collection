@@ -3,7 +3,7 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-
 import { ShoppingBag, Menu, X, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useCart } from "@/context/CartContext";
+import { clearOrdersHighlight } from "@/lib/orderHistory";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -66,6 +66,9 @@ export function Navbar() {
                   key={link.name}
                   href={link.path}
                   id={`nav-${link.name.toLowerCase()}`}
+                  onClick={() => {
+                    if (link.path === "/orders") clearOrdersHighlight();
+                  }}
                   className={cn(
                     "text-sm font-medium tracking-wider uppercase transition-all duration-300 hover:opacity-60",
                     textColorClass
@@ -140,7 +143,10 @@ export function Navbar() {
                   <Link
                     key={link.name}
                     href={link.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      if (link.path === "/orders") clearOrdersHighlight();
+                    }}
                     className="text-4xl font-light text-white hover:opacity-60 transition-opacity tracking-wider"
                   >
                     {link.name}

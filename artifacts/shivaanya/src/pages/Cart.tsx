@@ -14,7 +14,7 @@ import {
   normalizePromoInput,
 } from "@/lib/firstOrderPromo";
 import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
-import { saveOrder, type StoredOrder } from "@/lib/orderHistory";
+import { saveOrder, setOrdersHighlight, type StoredOrder } from "@/lib/orderHistory";
 import type { CartItem } from "@/context/CartContext";
 import { buildOrderItemsSummary } from "@/lib/orderNotify";
 
@@ -131,7 +131,8 @@ export default function Cart() {
       setPromoInput("");
       setPromoBanner(null);
       clearCart();
-      setLocation(`/orders?placed=${encodeURIComponent(details.orderNumber)}`);
+      setOrdersHighlight(details.orderNumber);
+      setLocation("/orders");
     },
     [items, total, promoDiscountInr, hello10Active, clearCart, setLocation],
   );

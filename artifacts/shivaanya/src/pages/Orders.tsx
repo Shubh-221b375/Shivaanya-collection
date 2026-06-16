@@ -1,9 +1,16 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Package, ArrowRight, ShoppingBag } from "lucide-react";
-import { getOrders, getOrderByNumber } from "@/lib/orderHistory";
+import {
+  clearOrdersHighlight,
+  getOrderByNumber,
+  getOrders,
+  getOrdersHighlight,
+  ORDERS_HIGHLIGHT_EVENT,
+  setOrdersHighlight,
+} from "@/lib/orderHistory";
 import { OrderConfirmationView } from "@/components/checkout/OrderConfirmationView";
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -21,19 +28,38 @@ function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   );
 }
 
-function placedOrderFromQuery(): string | null {
-  if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("placed");
+function migrateLegacyPlacedQuery(): void {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const placed = params.get("placed")?.trim();
+  if (!placed) return;
+  setOrdersHighlight(placed);
+  const base = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+  window.history.replaceState(null, "", `${base}/orders`);
 }
 
 export default function Orders() {
   const [location] = useLocation();
-  const placedOrderNumber = useMemo(() => placedOrderFromQuery(), [location]);
-  const orders = useMemo(() => getOrders(), [location, placedOrderNumber]);
-  const highlightedOrder = placedOrderNumber ? getOrderByNumber(placedOrderNumber) : undefined;
+  const [highlightOrderNumber, setHighlightOrderNumber] = useState<string | null>(() => getOrdersHighlight());
+
+  useEffect(() => {
+    migrateLegacyPlacedQuery();
+    const sync = () => setHighlightOrderNumber(getOrdersHighlight());
+    sync();
+    window.addEventListener(ORDERS_HIGHLIGHT_EVENT, sync);
+    return () => window.removeEventListener(ORDERS_HIGHLIGHT_EVENT, sync);
+  }, [location]);
+
+  const orders = useMemo(() => getOrders(), [location, highlightOrderNumber]);
+  const highlightedOrder = highlightOrderNumber ? getOrderByNumber(highlightOrderNumber) : undefined;
   const listOrders = highlightedOrder
-    ? orders.filter((o) => o.orderNumber !== placedOrderNumber)
+    ? orders.filter((o) => o.orderNumber !== highlightOrderNumber)
     : orders;
+
+  const showAllOrders = () => {
+    clearOrdersHighlight();
+    setHighlightOrderNumber(null);
+  };
 
   return (
     <div className="min-h-screen bg-[#fafafa] pt-24 md:pt-28">
@@ -48,7 +74,7 @@ export default function Orders() {
 
         {highlightedOrder ? (
           <div className="mt-10">
-            <OrderConfirmationView order={highlightedOrder} highlight />
+            <OrderConfirmationView order={highlightedOrder} highlight onViewAllOrders={showAllOrders} />
           </div>
         ) : null}
 
