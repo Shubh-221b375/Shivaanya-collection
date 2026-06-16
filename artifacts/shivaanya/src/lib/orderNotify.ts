@@ -7,6 +7,8 @@ export type OrderLineNotify = {
   size: string;
   quantity: number;
   price: number;
+  /** Full URL for the colour variant image the customer ordered. */
+  imageUrl?: string;
 };
 
 export type OrderConfirmationPayload = {

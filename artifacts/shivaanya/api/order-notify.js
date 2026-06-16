@@ -116,6 +116,22 @@ function extractProductCodes(lineItems) {
     .slice(0, 500);
 }
 
+/** Colour-labelled image URLs for sheet / ops — one entry per line item. */
+function formatLineItemImageUrls(lineItems) {
+  if (!Array.isArray(lineItems) || !lineItems.length) return "";
+  return lineItems
+    .map((i) => {
+      const url = clampStr(i?.imageUrl, 500);
+      if (!url || !/^https?:\/\//i.test(url)) return "";
+      const color = clampStr(i?.color, 40) || "As shown";
+      const code = i?.productCode ? `[${clampStr(i.productCode, 80)}] ` : "";
+      return `${code}${color}: ${url}`;
+    })
+    .filter(Boolean)
+    .join("; ")
+    .slice(0, 2000);
+}
+
 function buildCustomerEmailPlain(order) {
   const addr = [order.addressLine1, order.addressLine2, `${order.city}, ${order.state} ${order.pincode}`]
     .filter(Boolean)
@@ -246,6 +262,7 @@ function buildOrderRecord(orderNumber, fields) {
     bagTotalInr,
     itemsSummary,
     productCodes,
+    itemImageUrls,
     itemCount,
     subtotalInr,
     shippingInr,
@@ -277,6 +294,7 @@ function buildOrderRecord(orderNumber, fields) {
     itemCount,
     itemsSummary,
     productCodes,
+    itemImageUrls: itemImageUrls || "",
     promoCode: promoCode || "",
     promoDiscountInr: Math.round(promoDiscountInr),
     shipElsewhere: shipElsewhere ? "Yes" : "No",
@@ -486,6 +504,7 @@ async function handler(req, res) {
   const itemsSummaryFromLines = formatLineItemsSummary(lineItems);
   const itemsSummary = itemsSummaryFromLines || clampStr(body.itemsSummary, 900);
   const productCodes = extractProductCodes(lineItems);
+  const itemImageUrls = formatLineItemImageUrls(lineItems);
   const itemCount = Math.min(999, Math.max(0, parseInt(String(body.itemCount), 10) || 0));
   const subtotalInr = Number(body.subtotalInr);
   const shippingInr = Number(body.shippingInr);
@@ -516,6 +535,7 @@ async function handler(req, res) {
     bagTotalInr,
     itemsSummary,
     productCodes,
+    itemImageUrls,
     itemCount,
     subtotalInr,
     shippingInr,

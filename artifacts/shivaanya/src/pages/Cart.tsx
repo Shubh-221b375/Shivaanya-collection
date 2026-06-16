@@ -17,6 +17,7 @@ import { ReturnPolicySection } from "@/components/layout/ReturnPolicySection";
 import { saveOrder, setOrdersHighlight, type StoredOrder } from "@/lib/orderHistory";
 import type { CartItem } from "@/context/CartContext";
 import { buildOrderItemsSummary } from "@/lib/orderNotify";
+import { mediaUrl } from "@/lib/mediaUrl";
 
 /** COD handling fee added at checkout when customer chooses Cash on Delivery. */
 const COD_HANDLING_FEE_INR = 100;
@@ -336,6 +337,7 @@ export default function Cart() {
                       size: i.size,
                       quantity: i.quantity,
                       price: i.price,
+                      imageUrl: mediaUrl(i.productImage),
                     }))}
                     razorpayKeyId={razorpayKeyId}
                     codHandlingFeeInr={COD_HANDLING_FEE_INR}

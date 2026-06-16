@@ -56,7 +56,24 @@ const HEADERS = [
   "Alternate Address",
   "Razorpay Payment ID",
   "Razorpay Order ID",
+  "Item Image URLs",
 ];
+
+/** Add new columns to an existing sheet without wiping order rows. */
+function ensureSheetHeaders_(sheet) {
+  if (sheet.getLastRow() === 0) {
+    setupOrderSheet();
+    return;
+  }
+  const width = Math.max(sheet.getLastColumn(), HEADERS.length);
+  const row = sheet.getRange(1, 1, 1, width).getValues()[0];
+  if (row[0] !== "Order Number") return;
+  if (row.length < HEADERS.length || row[HEADERS.length - 1] !== HEADERS[HEADERS.length - 1]) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+}
 
 /** Run once from Apps Script editor to add column headers to Sheet1. */
 function setupOrderSheet() {
@@ -76,9 +93,7 @@ function doPost(e) {
     }
 
     const sheet = getOrderSheet_();
-    if (sheet.getLastRow() === 0) {
-      setupOrderSheet();
-    }
+    ensureSheetHeaders_(sheet);
 
     sheet.appendRow([
       payload.orderNumber || "",
@@ -105,6 +120,7 @@ function doPost(e) {
       payload.shipElsewhere || "",
       payload.razorpayPaymentId || "",
       payload.razorpayOrderId || "",
+      payload.itemImageUrls || "",
     ]);
 
     let emailSent = false;
@@ -375,9 +391,10 @@ function testOrderEmail() {
     paymentMethod: "cod",
     totalPayableInr: 1699,
     codHandlingFeeInr: 150,
-    itemCount: 1,
-    itemsSummary: "Test saree ×1",
-    shipElsewhere: "No",
+  itemCount: 1,
+  itemsSummary: "Test saree ×1",
+  itemImageUrls: "Black: https://shivaanya-collection-media.s3.ap-south-1.amazonaws.com/media/catalog/sarees/example.jpg",
+  shipElsewhere: "No",
     companyNotifyEmails: DEFAULT_COMPANY_EMAIL,
   };
   const result = sendOrderEmails_(sample, { customer: true, company: true });
